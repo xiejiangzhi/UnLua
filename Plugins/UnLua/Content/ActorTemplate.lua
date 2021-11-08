@@ -8,30 +8,30 @@
 
 require "UnLua"
 
-local TemplateName = Class()
+local M = Class()
 
---function TemplateName:Initialize(Initializer)
+--function M:Initialize(Initializer)
 --end
 
---function TemplateName:UserConstructionScript()
+--function M:UserConstructionScript()
 --end
 
---function TemplateName:ReceiveBeginPlay()
+--function M:ReceiveBeginPlay()
 --end
 
---function TemplateName:ReceiveEndPlay()
+--function M:ReceiveEndPlay()
 --end
 
--- function TemplateName:ReceiveTick(DeltaSeconds)
+-- function M:ReceiveTick(DeltaSeconds)
 -- end
 
---function TemplateName:ReceiveAnyDamage(Damage, DamageType, InstigatedBy, DamageCauser)
+--function M:ReceiveAnyDamage(Damage, DamageType, InstigatedBy, DamageCauser)
 --end
 
---function TemplateName:ReceiveActorBeginOverlap(OtherActor)
+--function M:ReceiveActorBeginOverlap(OtherActor)
 --end
 
---function TemplateName:ReceiveActorEndOverlap(OtherActor)
+--function M:ReceiveActorEndOverlap(OtherActor)
 --end
 
-return TemplateName
+return M

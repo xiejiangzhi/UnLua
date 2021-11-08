@@ -85,6 +85,20 @@ static int32 UWorld_SpawnActor(lua_State *L)
         }
     }
 
+    if (NumParams > 8) {
+        SpawnParameters.Name = FName(lua_tostring(L, 9));
+        SpawnParameters.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+    }
+
+    if (NumParams > 9) {
+        ULevel *Level = Cast<ULevel>(UnLua::GetUObject(L, 10));
+        if (Level) {
+            SpawnParameters.OverrideLevel = Level;
+        }
+    }
+
+
+
     {
         const char *ModuleName = NumParams > 6 ? lua_tostring(L, 7) : nullptr;
         int32 TableRef = INDEX_NONE;

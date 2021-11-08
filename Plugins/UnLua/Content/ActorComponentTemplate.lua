@@ -8,18 +8,18 @@
 
 require "UnLua"
 
-local TemplateName = Class()
+local M = Class()
 
---function TemplateName:Initialize(Initializer)
+--function M:Initialize(Initializer)
 --end
 
---function TemplateName:ReceiveBeginPlay()
+--function M:ReceiveBeginPlay()
 --end
 
---function TemplateName:ReceiveEndPlay()
+--function M:ReceiveEndPlay()
 --end
 
--- function TemplateName:ReceiveTick(DeltaSeconds)
+-- function M:ReceiveTick(DeltaSeconds)
 -- end
 
-return TemplateName
+return M

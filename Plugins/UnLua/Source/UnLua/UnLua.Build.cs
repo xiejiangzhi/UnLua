@@ -115,7 +115,8 @@ public class UnLua : ModuleRules
             PublicDefinitions.Add("ENABLE_AUTO_CLEAN_NNATCLASS=0");
         }
 
-        bool bEnableTypeCheck = true;
+        // bool bEnableTypeCheck = true;
+        bool bEnableTypeCheck = Target.Type == TargetType.Editor;
         if (bEnableTypeCheck)
         {
             PublicDefinitions.Add("ENABLE_TYPE_CHECK=1");

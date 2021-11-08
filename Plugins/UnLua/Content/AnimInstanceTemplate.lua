@@ -8,21 +8,21 @@
 
 require "UnLua"
 
-local TemplateName = Class()
+local M = Class()
 
---function TemplateName:Initialize(Initializer)
+--function M:Initialize(Initializer)
 --end
 
---function TemplateName:BlueprintInitializeAnimation()
+--function M:BlueprintInitializeAnimation()
 --end
 
---function TemplateName:BlueprintBeginPlay()
+--function M:BlueprintBeginPlay()
 --end
 
---function TemplateName:BlueprintUpdateAnimation(DeltaTimeX)
+--function M:BlueprintUpdateAnimation(DeltaTimeX)
 --end
 
--- function TemplateName:BlueprintPostEvaluateAnimation()
+-- function M:BlueprintPostEvaluateAnimation()
 -- end
 
-return TemplateName
+return M

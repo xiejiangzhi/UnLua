@@ -8,18 +8,18 @@
 
 require "UnLua"
 
-local TemplateName = Class()
+local M = Class()
 
---function TemplateName:Initialize(Initializer)
+--function M:Initialize(Initializer)
 --end
 
---function TemplateName:PreConstruct(IsDesignTime)
+--function M:PreConstruct(IsDesignTime)
 --end
 
--- function TemplateName:Construct()
+-- function M:Construct()
 -- end
 
---function TemplateName:Tick(MyGeometry, InDeltaTime)
+--function M:Tick(MyGeometry, InDeltaTime)
 --end
 
-return TemplateName
+return M
