@@ -37,6 +37,8 @@ public class Lua : ModuleRules
             PrivateDefinitions.Add("LUA_USE_DLOPEN");
         }
 
+        PrivateDefinitions.Add("LUA_FLOORN2I=F2Ifloor");
+
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "src"));
     }
 }
