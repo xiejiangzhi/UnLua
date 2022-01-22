@@ -1,15 +1,15 @@
 // Tencent is pleased to support the open source community by making UnLua available.
-// 
+//
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the MIT License (the "License"); 
+// Licensed under the MIT License (the "License");
 // you may not use this file except in compliance with the License. You may obtain a copy of the License at
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, 
-// software distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
 #include "UnLuaEx.h"
@@ -638,7 +638,7 @@ static int32 TArray_ToTable(lua_State *L)
     return 1;
 }
 
-static int32 TArray_AddDefaulted_GetRef(lua_State *L) {
+static int32 TArray_AddDefaultedAndGetRef(lua_State *L) {
     int32 NumParams = lua_gettop(L);
     if (NumParams != 1)
     {
@@ -659,13 +659,12 @@ static int32 TArray_AddDefaulted_GetRef(lua_State *L) {
     return 1;
 }
 
-
 static const luaL_Reg TArrayLib[] =
 {
     { "Length", TArray_Length },
     { "Add", TArray_Add },
     { "AddUnique", TArray_AddUnique },
-    { "AddDefaultedGetRef", TArray_AddDefaulted_GetRef },
+    { "AddDefaultedAndGetRef", TArray_AddDefaultedAndGetRef },
     { "Find", TArray_Find },
     { "Insert", TArray_Insert },
     { "Remove", TArray_Remove },
