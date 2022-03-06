@@ -1,15 +1,15 @@
 // Tencent is pleased to support the open source community by making UnLua available.
-// 
+//
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the MIT License (the "License"); 
+// Licensed under the MIT License (the "License");
 // you may not use this file except in compliance with the License. You may obtain a copy of the License at
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, 
-// software distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
 #include "UnLuaEx.h"
@@ -339,6 +339,52 @@ static int32 TMap_ToTable(lua_State *L)
     return 1;
 }
 
+/**
+ * Convert the map to a Lua ref table
+ */
+static int32 TMap_ToRefTable(lua_State *L)
+{
+    int32 NumParams = lua_gettop(L);
+    if (NumParams != 1)
+    {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid parameters!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    FLuaMap *Map = (FLuaMap*)(GetCppInstanceFast(L, 1));
+    if (!Map)
+    {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid TMap!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    void *MemData = FMemory::Malloc(sizeof(FLuaArray), alignof(FLuaArray));
+    FLuaArray *Keys = Map->Keys(MemData);
+    Keys->Inner->Initialize(Keys->ElementCache);
+    lua_newtable(L);
+    for (int32 i = 0; i < Keys->Num(); ++i)
+    {
+        Keys->Get(i, Keys->ElementCache);
+        Keys->Inner->Read(L, Keys->ElementCache, true);
+
+        void *Value = Map->Find(Keys->ElementCache);
+        if (Value)
+        {
+            const void *Key = (uint8*)Value - Map->ValueInterface->GetOffset();
+            Map->ValueInterface->Read(L, Key, false);
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
+
+        lua_rawset(L, -3);
+    }
+    Keys->Inner->Destruct(Keys->ElementCache);
+    FMemory::Free(MemData);
+    return 1;
+}
+
 static const luaL_Reg TMapLib[] =
 {
     { "Length", TMap_Length },
@@ -350,6 +396,7 @@ static const luaL_Reg TMapLib[] =
     { "Keys", TMap_Keys },
     { "Values", TMap_Values },
     { "ToTable", TMap_ToTable },
+    { "ToRefTable", TMap_ToRefTable },
     { "__gc", TMap_Delete },
     { "__call", TMap_New },
     { nullptr, nullptr }

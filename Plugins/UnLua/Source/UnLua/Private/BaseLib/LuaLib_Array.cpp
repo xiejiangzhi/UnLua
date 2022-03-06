@@ -638,6 +638,37 @@ static int32 TArray_ToTable(lua_State *L)
     return 1;
 }
 
+/**
+ * Convert the array to a Lua table and ref origin value
+ */
+static int32 TArray_ToRefTable(lua_State *L)
+{
+    int32 NumParams = lua_gettop(L);
+    if (NumParams != 1)
+    {
+        UE_LOG(LogUnLua, Log, TEXT("%s: Invalid parameters!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    FLuaArray *Array = (FLuaArray*)(GetCppInstanceFast(L, 1));
+    if (!Array)
+    {
+        UE_LOG(LogUnLua, Log, TEXT("%s: Invalid TArray!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    lua_newtable(L);
+    Array->Inner->Initialize(Array->ElementCache);
+    for (int32 i = 0; i < Array->Num(); ++i)
+    {
+        lua_pushinteger(L, i + 1);
+        const void *Elem = Array->GetData(i);
+        Array->Inner->Read(L, Elem, false);
+        lua_rawset(L, -3);
+    }
+    return 1;
+}
+
 static int32 TArray_AddDefaultedAndGetRef(lua_State *L) {
     int32 NumParams = lua_gettop(L);
     if (NumParams != 1)
@@ -683,6 +714,7 @@ static const luaL_Reg TArrayLib[] =
     { "Contains", TArray_Contains },
     { "Append", TArray_Append },
     { "ToTable", TArray_ToTable },
+    { "ToRefTable", TArray_ToRefTable },
     { "__gc", TArray_Delete },
     { "__call", TArray_New },
     { nullptr, nullptr }

@@ -17,8 +17,4 @@ IOS/
 *.xcworkspace
 /.idea
 /TPSProject.sln.DotSettings.user
-<<<<<<< HEAD
 /.vscode
-=======
-/.vscode
->>>>>>> array_ext
