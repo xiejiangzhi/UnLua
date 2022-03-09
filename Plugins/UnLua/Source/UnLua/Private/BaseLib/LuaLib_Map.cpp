@@ -385,6 +385,50 @@ static int32 TMap_ToRefTable(lua_State *L)
     return 1;
 }
 
+/**
+ * TMap:WriteTable({ key = val, key2 = val2, k3 = v3, ...}, should_clear)
+ */
+static int32 TMap_WriteTable(lua_State *L)
+{
+    int32 NumParams = lua_gettop(L);
+    if (NumParams < 2 || NumParams > 3)
+    {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid parameters!"), ANSI_TO_TCHAR(__FUNCTION__));
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    FLuaMap *Map = (FLuaMap*)(GetCppInstanceFast(L, 1));
+    if (!Map)
+    {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid TMap!"), ANSI_TO_TCHAR(__FUNCTION__));
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    if (NumParams == 3 && lua_toboolean(L, 3)) {
+        Map->Clear();
+    }
+
+    void *ValueCache = (uint8*)Map->ElementCache + Map->MapLayout.ValueOffset;
+    Map->KeyInterface->Initialize(Map->ElementCache);
+    Map->ValueInterface->Initialize(ValueCache);
+
+    lua_pushnil(L);
+    while (lua_next(L, 2) != 0) {
+        Map->KeyInterface->Write(L, Map->ElementCache, -2);
+        Map->ValueInterface->Write(L, Map->ValueInterface->GetOffset() > 0 ? Map->ElementCache : ValueCache, -1);
+        Map->Add(Map->ElementCache, ValueCache);
+        lua_pop(L, 1);
+    }
+
+    Map->KeyInterface->Destruct(Map->ElementCache);
+    Map->ValueInterface->Destruct(ValueCache);
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 static const luaL_Reg TMapLib[] =
 {
     { "Length", TMap_Length },
@@ -397,6 +441,7 @@ static const luaL_Reg TMapLib[] =
     { "Values", TMap_Values },
     { "ToTable", TMap_ToTable },
     { "ToRefTable", TMap_ToRefTable },
+    { "WriteTable", TMap_WriteTable },
     { "__gc", TMap_Delete },
     { "__call", TMap_New },
     { nullptr, nullptr }

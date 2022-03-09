@@ -690,6 +690,45 @@ static int32 TArray_AddDefaultedAndGetRef(lua_State *L) {
     return 1;
 }
 
+// TArray:WriteTable({1, 2, 3, 4}, should_clear)
+static int32 TArray_WriteTable(lua_State *L) {
+    int32 NumParams = lua_gettop(L);
+    if (NumParams < 2 || NumParams > 3) {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid parameters!"), ANSI_TO_TCHAR(__FUNCTION__));
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    FLuaArray *Array = (FLuaArray*)(GetCppInstanceFast(L, 1));
+    if (!Array) {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid TArray!"), ANSI_TO_TCHAR(__FUNCTION__));
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    int32 Type = lua_type(L, 2);
+    if (Type != LUA_TTABLE) {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid table value!"), ANSI_TO_TCHAR(__FUNCTION__));
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    if (NumParams == 3 && lua_toboolean(L, 3)) {
+        Array->Clear();
+    }
+
+    lua_pushnil(L);
+    while (lua_next(L, 2) != 0) {
+        int32 Index = Array->AddDefaulted();
+        uint8 *Data = Array->GetData(Index);
+        Array->Inner->Write(L, Data, -1);
+        lua_pop(L, 1);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 static const luaL_Reg TArrayLib[] =
 {
     { "Length", TArray_Length },
@@ -715,6 +754,7 @@ static const luaL_Reg TArrayLib[] =
     { "Append", TArray_Append },
     { "ToTable", TArray_ToTable },
     { "ToRefTable", TArray_ToRefTable },
+    { "WriteTable", TArray_WriteTable },
     { "__gc", TArray_Delete },
     { "__call", TArray_New },
     { nullptr, nullptr }
