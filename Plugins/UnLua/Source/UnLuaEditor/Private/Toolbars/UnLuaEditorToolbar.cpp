@@ -169,7 +169,7 @@ void FUnLuaEditorToolbar::UnbindFromLua_Executed() const
     if (!DockingTabWell)
         return;
 
-    const auto DockTabs = DockingTabWell->GetChildren(); // DockingTabWell->GetTabs(); 
+    const auto DockTabs = DockingTabWell->GetChildren(); // DockingTabWell->GetTabs();
     for (auto i = 0; i < DockTabs->Num(); i++)
     {
         const auto DockTab = StaticCastSharedRef<SDockTab>(DockTabs->GetChildAt(i));
@@ -234,6 +234,8 @@ void FUnLuaEditorToolbar::CreateLuaTemplate_Executed()
     {
         // default BlueprintEvents for ActorComponent
         TemplateName = ContentDir + TEXT("/ActorComponentTemplate.lua");
+    } else {
+        TemplateName = ContentDir + TEXT("/DefaultTemplate.lua");
     }
 
     FString Content;
