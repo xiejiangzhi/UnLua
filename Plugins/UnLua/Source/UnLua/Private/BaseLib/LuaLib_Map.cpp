@@ -429,6 +429,50 @@ static int32 TMap_WriteTable(lua_State *L)
     return 1;
 }
 
+/**
+ * TMap:Merge(TMap2)
+ */
+static int32 TMap_Merge(lua_State *L)
+{
+    int32 NumParams = lua_gettop(L);
+    if (NumParams != 2)
+    {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid parameters!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    FLuaMap *Map = (FLuaMap*)(GetCppInstanceFast(L, 1));
+    if (!Map)
+    {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid TMap!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    FLuaMap *OtherMap = (FLuaMap*)(GetCppInstanceFast(L, 2));
+    if (!OtherMap)
+    {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid TMap!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    // TODO: Check Two map is the same type
+    Map->KeyInterface->Initialize(Map->ElementCache);
+    void *MemData = FMemory::Malloc(sizeof(FLuaArray), alignof(FLuaArray));
+    FLuaArray *Keys = OtherMap->Keys(MemData);
+    for (int32 i = 0; i < Keys->Num(); ++i)
+    {
+        Keys->Get(i, Keys->ElementCache);
+        void *Value = OtherMap->Find(Keys->ElementCache);
+        if (Value)
+        {
+            Map->Add(Keys->ElementCache, Value);
+        }
+    }
+    FMemory::Free(MemData);
+    Map->KeyInterface->Destruct(Map->ElementCache);
+    return 0;
+}
+
 static const luaL_Reg TMapLib[] =
 {
     { "Length", TMap_Length },
@@ -442,6 +486,7 @@ static const luaL_Reg TMapLib[] =
     { "ToTable", TMap_ToTable },
     { "ToRefTable", TMap_ToRefTable },
     { "WriteTable", TMap_WriteTable },
+    { "Merge", TMap_Merge },
     { "__gc", TMap_Delete },
     { "__call", TMap_New },
     { nullptr, nullptr }
