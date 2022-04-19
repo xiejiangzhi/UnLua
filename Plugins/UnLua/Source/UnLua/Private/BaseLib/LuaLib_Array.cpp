@@ -717,10 +717,10 @@ static int32 TArray_WriteTable(lua_State *L) {
         Array->Clear();
     }
 
+    int32 Index = Array->AddDefaulted(len);
     lua_pushnil(L);
     while (lua_next(L, 2) != 0) {
-        int32 Index = Array->AddDefaulted();
-        uint8 *Data = Array->GetData(Index);
+        uint8 *Data = Array->GetData(Index++);
         Array->Inner->Write(L, Data, -1);
         lua_pop(L, 1);
     }
