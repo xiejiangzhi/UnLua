@@ -717,7 +717,7 @@ static int32 TArray_WriteTable(lua_State *L) {
         Array->Clear();
     }
 
-    int len = lua_rawlen(L, 2);
+    size_t len = lua_rawlen(L, 2);
     if (len == 0) {
         lua_pushboolean(L, true);
         return 1;
@@ -768,3 +768,4 @@ static const luaL_Reg TArrayLib[] =
 
 EXPORT_UNTYPED_CLASS(TArray, false, TArrayLib)
 IMPLEMENT_EXPORTED_CLASS(TArray)
+
