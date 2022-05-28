@@ -551,6 +551,7 @@ static const luaL_Reg TMapLib[] =
     { "ToTable", TMap_ToTable },
     { "WriteTable", TMap_WriteTable },
     { "Merge", TMap_Merge },
+    { "Iter", TMap_Pairs },
     { "__gc", TMap_Delete },
     { "__call", TMap_New },
     { "__pairs", TMap_Pairs },

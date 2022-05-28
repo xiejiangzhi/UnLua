@@ -75,7 +75,7 @@ static int TArray_Enumerable(lua_State* L)
 
         Array->Inner->Destruct(Array->ElementCache);
 
-        (*Enumerator)->Index += 1;
+        (*Enumerator)->Index += (*Enumerator)->Increment;
 
         return 2;
     }
@@ -101,6 +101,13 @@ static int32 TArray_Pairs(lua_State* L)
         return 0;
     }
 
+    const int32 IncrVal = NumParams > 1 ? lua_tointeger(L, 2) : 1;
+    if (IncrVal == 0) {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Increment value cannot be zero!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+    const int32 StartIndex = IncrVal > 0 ? 0 : Array->Num() - 1;
+
     // Enumerable
     lua_pushcfunction(L, TArray_Enumerable);
 
@@ -108,7 +115,7 @@ static int32 TArray_Pairs(lua_State* L)
     FLuaArray::FLuaArrayEnumerator** Enumerator = (FLuaArray::FLuaArrayEnumerator**)lua_newuserdata(
         L, sizeof(FLuaArray::FLuaArrayEnumerator*));
 
-    *Enumerator = new FLuaArray::FLuaArrayEnumerator(Array, 0);
+    *Enumerator = new FLuaArray::FLuaArrayEnumerator(Array, StartIndex, IncrVal);
 
     // Enumerable userdata mt
     lua_newtable(L);
@@ -847,6 +854,7 @@ static const luaL_Reg TArrayLib[] =
     { "Append", TArray_Append },
     { "ToTable", TArray_ToTable },
     { "WriteTable", TArray_WriteTable },
+    { "Iter", TArray_Pairs },
     { "__gc", TArray_Delete },
     { "__call", TArray_New },
     { "__pairs", TArray_Pairs },
