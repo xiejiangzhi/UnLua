@@ -67,7 +67,7 @@ public:
 
     virtual void StartupModule() override
     {
-        Style = MakeShareable(new FUnLuaEditorStyle);
+        Style = FUnLuaEditorStyle::GetInstance();
 
         FUnLuaEditorCommands::Register();
 
@@ -92,7 +92,7 @@ private:
     {
         RegisterSettings();
 
-        if (IsRunningGame())
+        if (!GEditor)
         {
             // Loading MainFrame module with '-game' is not supported
             return;

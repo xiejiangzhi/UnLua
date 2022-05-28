@@ -42,7 +42,7 @@ FFunctionDesc::FFunctionDesc(UFunction *InFunction, FParameterCollection *InDefa
     else
         LuaFunctionName = MakeUnique<FTCHARToUTF8>(*FuncName);
 #else
-    LuaFunctionName = MakeUnique<FTCHARToUTF8>(*GetName());
+    LuaFunctionName = MakeUnique<FTCHARToUTF8>(*FuncName);
 #endif
     
     bStaticFunc = InFunction->HasAnyFunctionFlags(FUNC_Static);         // a static function?
@@ -186,46 +186,75 @@ void FFunctionDesc::CallLua(lua_State* L, lua_Integer FunctionRef, lua_Integer S
     check(lua_isfunction(L, -1));
     lua_rawgeti(L, LUA_REGISTRYINDEX, SelfRef);
     check(lua_istable(L, -1));
-    
-    const bool bUnpackParams = Stack.CurrentNativeFunction && Stack.Node != Stack.CurrentNativeFunction;
-    bool bSuccess;
 
+    void* InParms = nullptr;
+    FOutParmRec* OutParms = Stack.OutParms;
+    const bool bUnpackParams = Stack.CurrentNativeFunction && Stack.Node != Stack.CurrentNativeFunction;
     if (bUnpackParams)
     {
-        void* Params = nullptr;
 #if ENABLE_PERSISTENT_PARAM_BUFFER
         if (!bHasDelegateParams)
-        {
-            Params = Buffer;
-        }
+            InParms = Buffer;
 #endif
-        if (!Params)
+        if (!InParms)
+            InParms = ParmsSize > 0 ? FMemory::Malloc(ParmsSize, 16) : nullptr;
+
+        FOutParmRec* FirstOut = nullptr;
+        FOutParmRec* LastOut = nullptr;
+
+        for (FProperty* Property = (FProperty*)(Function->ChildProperties);
+             *Stack.Code != EX_EndFunctionParms;
+             Property = (FProperty*)(Property->Next))
         {
-            Params = ParmsSize > 0 ? FMemory::Malloc(ParmsSize, 16) : nullptr;
+            if (Property->PropertyFlags & CPF_OutParm)
+            {
+                Stack.Step(Stack.Object, nullptr);
+
+                CA_SUPPRESS(6263)
+                FOutParmRec* Out = (FOutParmRec*)FMemory_Alloca(sizeof(FOutParmRec));
+                ensure(Stack.MostRecentPropertyAddress);
+                Out->PropAddr = (Stack.MostRecentPropertyAddress != nullptr) ? Stack.MostRecentPropertyAddress : Property->ContainerPtrToValuePtr<uint8>(InParms);
+                Out->Property = Property;
+
+                if (FirstOut)
+                {
+                    LastOut->NextOutParm = Out;
+                    LastOut = Out;    
+                }
+                else
+                {
+                    FirstOut = Out;
+                    LastOut = Out;
+                }
+            }
+            else
+            {
+                Stack.Step(Stack.Object, Property->ContainerPtrToValuePtr<uint8>(InParms));
+            }
         }
 
-        SkipCodes(Stack, Params);
-
-        bSuccess = CallLuaInternal(L, Params, Stack.OutParms, RESULT_PARAM); // call Lua function...
-
-        if (Params)
+        if (LastOut)
         {
-#if ENABLE_PERSISTENT_PARAM_BUFFER
-            if (bHasDelegateParams)
-#endif
-            FMemory::Free(Params);
+            LastOut->NextOutParm = Stack.OutParms;
+            OutParms = FirstOut;
         }
+
+        check(Stack.PeekCode() == EX_EndFunctionParms);
+        Stack.SkipCode(1); // skip EX_EndFunctionParms
     }
     else
     {
-        bSuccess = CallLuaInternal(L, Stack.Locals, Stack.OutParms, RESULT_PARAM); // call Lua function...
+        InParms = Stack.Locals;
     }
 
-    if (!bSuccess && bUnpackParams)
+    CallLuaInternal(L, InParms , OutParms, RESULT_PARAM);
+
+    if (bUnpackParams && InParms)
     {
-        FMemMark Mark(FMemStack::Get());
-        void* Params = New<uint8>(FMemStack::Get(), ParmsSize, 16);
-        SkipCodes(Stack, Params);
+#if ENABLE_PERSISTENT_PARAM_BUFFER
+        if (bHasDelegateParams)
+#endif
+            FMemory::Free(InParms);
     }
 }
 
@@ -234,7 +263,10 @@ bool FFunctionDesc::CallLua(lua_State* L, int32 LuaRef, void* Params, UObject* S
     bool bOk = PushFunction(L, Self, LuaRef);
     if (!bOk)
         return false;
-    bOk = CallLuaInternal(L, Params, nullptr, nullptr); // call Lua function...
+
+    const bool bHasReturnParam = Function->ReturnValueOffset != MAX_uint16;
+    uint8* ReturnValueAddress = bHasReturnParam ? ((uint8*)Params + Function->ReturnValueOffset) : nullptr;
+    bOk = CallLuaInternal(L, Params, nullptr, ReturnValueAddress);
     return bOk;
 }
 
@@ -428,8 +460,8 @@ void* FFunctionDesc::PreCall(lua_State *L, int32 NumParams, int32 FirstParamInde
             }
 
             // bind a callback to the latent function
-            const auto& Env = UnLua::FLuaEnv::FindEnvChecked(L);
-            FLatentActionInfo LatentActionInfo(ThreadRef, GetTypeHash(FGuid::NewGuid()), TEXT("OnLatentActionCompleted"), (UObject*)Env.GetManager());
+            auto& Env = UnLua::FLuaEnv::FindEnvChecked(L);
+            FLatentActionInfo LatentActionInfo(ThreadRef, GetTypeHash(FGuid::NewGuid()), TEXT("OnLatentActionCompleted"), (Env.GetManager()));
             Property->CopyValue(ContainerPtr, &LatentActionInfo);
             continue;
         }
@@ -486,6 +518,18 @@ int32 FFunctionDesc::PostCall(lua_State *L, int32 NumParams, int32 FirstParamInd
 {
     int32 NumReturnValues = 0;
 
+#if UNLUA_LEGACY_RETURN_ORDER
+    for (int32 Index : OutPropertyIndices)
+    {
+        const auto& Property = Properties[Index];
+        if (Index >= NumParams || !Property->CopyBack(L, Params, FirstParamIndex + Index))
+        {
+            Property->GetValue(L, Params, true);
+            ++NumReturnValues;
+        }
+    }
+#endif
+
     if (ReturnPropertyIndex > INDEX_NONE)
     {
         const auto& Property = Properties[ReturnPropertyIndex];
@@ -503,6 +547,7 @@ int32 FFunctionDesc::PostCall(lua_State *L, int32 NumParams, int32 FirstParamInd
         ++NumReturnValues;
     }
 
+#if !UNLUA_LEGACY_RETURN_ORDER
     // !!!Fix!!!
     // out parameters always use return format, copyback is better,but some parameters such 
     // as int can not be copy back
@@ -516,6 +561,7 @@ int32 FFunctionDesc::PostCall(lua_State *L, int32 NumParams, int32 FirstParamInd
             ++NumReturnValues;
         }
     }
+#endif
 
     for (int32 i = 0; i < Properties.Num(); ++i)
     {
@@ -606,6 +652,11 @@ bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *O
     if (NumResult <= NumResultOnStack)
     {
         int32 OutPropertyIndex = -NumResult;
+#if !UNLUA_LEGACY_RETURN_ORDER
+        if (ReturnPropertyIndex > INDEX_NONE)
+            OutPropertyIndex++;
+#endif
+
         OutParam = OutParams;
 
         for (int32 i = 0; i < OutPropertyIndices.Num(); ++i)
@@ -651,14 +702,20 @@ bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *O
         {
             const auto& ReturnProperty = Properties[ReturnPropertyIndex];
 
+#if UNLUA_LEGACY_RETURN_ORDER
+            constexpr auto IndexInStack = -1;
+#else
+            const auto IndexInStack = -NumParams;
+#endif
+            
             // set value for blueprint side return property
             const FOutParmRec* RetParam = OutParam ? FindOutParmRec(OutParam, ReturnProperty->GetProperty()) : nullptr;
             if (RetParam)
-                ReturnProperty->SetValueInternal(L, RetParam->PropAddr, -1, true);
+                ReturnProperty->SetValueInternal(L, RetParam->PropAddr, IndexInStack, true);
 
             // set value for return property
             check(RetValueAddress);
-            ReturnProperty->SetValueInternal(L, RetValueAddress, -1, true);
+            ReturnProperty->SetValueInternal(L, RetValueAddress, IndexInStack, true);
         }
     }
 
@@ -666,42 +723,3 @@ bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *O
     return true;
 }
 
-void FFunctionDesc::SkipCodes(FFrame& Stack, void* Params)
-{
-    FOutParmRec** LastOut = Stack.OutParms ? nullptr : &Stack.OutParms;
-
-    for (FProperty* Property = (FProperty*)(Function->ChildProperties);
-         *Stack.Code != EX_EndFunctionParms;
-         Property = (FProperty*)(Property->Next))
-    {
-        if (Property->PropertyFlags & CPF_OutParm)
-        {
-            Stack.Step(Stack.Object, nullptr);
-            if (!LastOut)
-                continue;
-
-            CA_SUPPRESS(6263)
-            FOutParmRec* Out = (FOutParmRec*)FMemory_Alloca(sizeof(FOutParmRec));
-            ensure(Stack.MostRecentPropertyAddress);
-            Out->PropAddr = (Stack.MostRecentPropertyAddress != nullptr) ? Stack.MostRecentPropertyAddress : Property->ContainerPtrToValuePtr<uint8>(Params);
-            Out->Property = Property;
-
-            if (*LastOut)
-            {
-                (*LastOut)->NextOutParm = Out;
-                LastOut = &(*LastOut)->NextOutParm;
-            }
-            else
-            {
-                *LastOut = Out;
-            }
-        }
-        else
-        {
-            Stack.Step(Stack.Object, Property->ContainerPtrToValuePtr<uint8>(Params));
-        }
-    }
-
-    check(Stack.PeekCode() == EX_EndFunctionParms);
-    Stack.SkipCode(1); // skip EX_EndFunctionParms
-}

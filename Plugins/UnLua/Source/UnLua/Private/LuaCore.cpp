@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 // See the License for the specific language governing permissions and limitations under the License.
 
+#include "CollisionHelper.h"
 #include "LuaCore.h"
 
 #include "Binding.h"
@@ -19,7 +20,6 @@
 #include "UnLua.h"
 #include "UnLuaDelegates.h"
 #include "ObjectReferencer.h"
-#include "CollisionHelper.h"
 #include "LowLevel.h"
 #include "Containers/LuaSet.h"
 #include "Containers/LuaMap.h"
@@ -2046,11 +2046,40 @@ TSharedPtr<UnLua::ITypeInterface> CreateTypeInterface(lua_State *L, int32 Index)
         break;
     case LUA_TUSERDATA:
         {
-            UClass *Class = Cast<UClass>(UnLua::GetUObject(L, Index));
-            if (Class)
+            // mt/nil
+            lua_getmetatable(L, Index);
+
+            if (lua_istable(L, -1))
             {
-                TypeInterface = GPropertyCreator.CreateClassProperty(Class);
+                // mt,mt.__name/nil
+                lua_getfield(L, -1, "__name");
+
+                if (lua_isstring(L, -1))
+                {
+                    const char* Name = lua_tostring(L, -1);
+
+                    FClassDesc* ClassDesc = UnLua::FClassRegistry::Find(Name);
+
+                    if (ClassDesc)
+                    {
+                        if (ClassDesc->IsClass())
+                        {
+                            UClass* Class = ClassDesc->AsClass();
+                            TypeInterface = GPropertyCreator.CreateObjectProperty(Class);
+                        }
+                        else
+                        {
+                            UScriptStruct* ScriptStruct = ClassDesc->AsScriptStruct();
+                            TypeInterface = GPropertyCreator.CreateStructProperty(ScriptStruct);
+                        }
+                    }
+                }
+
+                // mt
+                lua_pop(L, 1);
             }
+
+            lua_pop(L, 1);
         }
         break;
     }

@@ -12,10 +12,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 // See the License for the specific language governing permissions and limitations under the License.
 
+#include "Engine/World.h"
 #include "LuaEnvLocator.h"
 
 TSharedPtr<UnLua::FLuaEnv> ULuaEnvLocator::Locate(const UObject* Object)
 {
+    if (!Env.IsValid())
+        Env = MakeShared<UnLua::FLuaEnv>();
     return Env;
 }
 
@@ -32,19 +35,27 @@ void ULuaEnvLocator::Reset()
 TSharedPtr<UnLua::FLuaEnv> ULuaEnvLocator_ByGameInstance::Locate(const UObject* Object)
 {
     if (!Object)
-        return Env;
+        return GetDefault();
 
-    const auto Outer = Object->GetOuter();
-    if (!Outer)
-        return Env;
+    UGameInstance* GameInstance;
+    if (Object->IsA(UGameInstance::StaticClass()))
+    {
+        GameInstance = (UGameInstance*)Object;
+    }
+    else
+    {
+        const auto Outer = Object->GetOuter();
+        if (!Outer)
+            return GetDefault();
 
-    const auto World = Outer->GetWorld();
-    if (!World)
-        return Env;
+        const auto World = Outer->GetWorld();
+        if (!World)
+            return GetDefault();
 
-    const auto GameInstance = World->GetGameInstance();
-    if (!GameInstance)
-        return Env;
+        GameInstance = World->GetGameInstance();
+        if (!GameInstance)
+            return GetDefault();
+    }
 
     TSharedPtr<UnLua::FLuaEnv> Ret;
     if (Envs.Contains(GameInstance))
@@ -63,7 +74,7 @@ TSharedPtr<UnLua::FLuaEnv> ULuaEnvLocator_ByGameInstance::Locate(const UObject* 
 void ULuaEnvLocator_ByGameInstance::HotReload()
 {
     Env->HotReload();
-    for (const auto Pair : Envs)
+    for (const auto& Pair : Envs)
         Pair.Value->HotReload();
 }
 
@@ -73,4 +84,11 @@ void ULuaEnvLocator_ByGameInstance::Reset()
     for (auto Pair : Envs)
         Pair.Value.Reset();
     Envs.Empty();
+}
+
+TSharedPtr<UnLua::FLuaEnv> ULuaEnvLocator_ByGameInstance::GetDefault()
+{
+    if (!Env.IsValid())
+        Env = MakeShared<UnLua::FLuaEnv>();
+    return Env;
 }

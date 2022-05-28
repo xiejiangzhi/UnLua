@@ -17,13 +17,15 @@
 #include "Engine/DataTable.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "UnLua.h"
 #include "GameFramework/Character.h"
+#include "UnLua.h"
 #include "UnLuaTestHelpers.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUnLuaTestSimpleEvent);
 
 DECLARE_DYNAMIC_DELEGATE(FUnLuaTestSimpleHandler);
+
+DECLARE_DYNAMIC_DELEGATE_RetVal_OneParam(int32, FUnLuaTestComplexHandler, FString&, Name);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIssue304Event, TArray<FString>, Array);
 
@@ -35,6 +37,21 @@ enum EEnumForIssue331
     RECORD_NONE = 0,
     RECORD_TO_FILE = 1 + 2,
     RECORD_TO_LOG = 4,
+};
+
+namespace EScopedEnum
+{
+    enum Type
+    {
+        Value1 = 1,
+        Value2 = 2,
+    };
+}
+
+enum class EEnumClass
+{
+    Value1 = 1,
+    Value2 = 2
 };
 
 UCLASS()
@@ -50,6 +67,9 @@ public:
     FUnLuaTestSimpleHandler SimpleHandler;
 
     UPROPERTY()
+    FUnLuaTestComplexHandler ComplexHandler;
+
+    UPROPERTY()
     FIssue304Event Issue304Event;
 
     UPROPERTY()
@@ -58,6 +78,10 @@ public:
     UPROPERTY()
     int32 Counter;
 
+    EScopedEnum::Type ScopedEnum;
+
+    EEnumClass EnumClass;
+    
     UFUNCTION(BlueprintCallable)
     void AddCount() { Counter++; }
 
@@ -66,6 +90,8 @@ public:
 
     UUnLuaTestStub()
     {
+        ScopedEnum = EScopedEnum::Value1;
+        EnumClass = EEnumClass::Value1;
         MapForIssue407.Add(1, 1);
         MapForIssue407.Add(2, 2);
     }
@@ -189,7 +215,10 @@ EPIC_TEST_BOOLEAN_(TEXT(#expression), expression, false)
 #define TEST_EQUAL(expression, expected) \
 EPIC_TEST_BOOLEAN_(TEXT(#expression), expression, expected)
 
+#define TEST_QUAT_EQUAL(expression, expected) \
+EPIC_TEST_BOOLEAN_(TEXT(#expression), FQuat::ErrorAutoNormalize(expression, expected) < 0.0001, true)
+
 #define EPIC_TEST_BOOLEAN_(text, expression, expected) \
 TestEqual(text, expression, expected);
 
-#endif //WITH_DEV_AUTOMATION_TESTS
+#endif

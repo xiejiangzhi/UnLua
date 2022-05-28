@@ -77,6 +77,26 @@ void FUnLuaLibMapSpec::Define()
             TEST_EQUAL(Map->operator[](FVector(1,1,1)), true);
             TEST_EQUAL(Map->operator[](FVector(2,2,2)), false);
         });
+
+        It(TEXT("构造TMap<UStruct,UStruct>"), EAsyncExecution::TaskGraphMainThread, [this]()
+        {
+            const char* Chunk = R"(
+            local Struct_TableRow = UE.UObject.Load("/UnLuaTestSuite/Tests/Misc/Struct_TableRow.Struct_TableRow")
+            local Map = UE.TMap(Struct_TableRow, Struct_TableRow)
+
+            local Item1 = Struct_TableRow()
+            Item1.TestString = "foo"
+            local Item2 = Struct_TableRow()
+            Item2.TestString = "bar"
+            
+            Map:Add(Item1, Item2)
+            Map:Add(Item2, Item1)
+            return Map
+            )";
+            UnLua::RunChunk(L, Chunk);
+            const auto& Map = *UnLua::GetMap(L, -1);
+            TEST_EQUAL(Map.Num(), 2);
+        });
     });
 
     Describe(TEXT("Length"), [this]()
@@ -276,6 +296,34 @@ void FUnLuaLibMapSpec::Define()
             UnLua::RunChunk(L, Chunk);
             TEST_EQUAL(lua_tointeger(L, -1), 4LL);
             TEST_EQUAL(lua_tointeger(L, -2), 3LL);
+        });
+    });
+
+    Describe(TEXT("pairs"), [this]
+    {
+        It(TEXT("迭代获取Key与Value"), EAsyncExecution::TaskGraphMainThread, [this]()
+        {
+            const char* Chunk = R"(
+            local Map = UE.TMap(0, 0)
+            Map:Add(1, 100)
+            Map:Add(2, 200)
+
+            local ret = {}
+            for key, value in pairs(Map) do
+                table.insert(ret, key)
+                table.insert(ret, value)
+            end
+            return ret;
+            )";
+            TEST_TRUE(UnLua::RunChunk(L, Chunk));
+
+            const auto& Env = UnLua::FLuaEnv::FindEnv(L);
+            const auto Ret = UnLua::FLuaTable(Env, -1);
+            TEST_EQUAL(Ret.Length(), 4);
+            TEST_EQUAL(Ret[1].Value<int>(), 1)
+            TEST_EQUAL(Ret[2].Value<int>(), 100)
+            TEST_EQUAL(Ret[3].Value<int>(), 2)
+            TEST_EQUAL(Ret[4].Value<int>(), 200)
         });
     });
 

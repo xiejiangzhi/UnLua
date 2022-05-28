@@ -14,7 +14,11 @@
 
 using System;
 using System.IO;
+#if UE_5_0_OR_LATER
+using EpicGames.Core;
+#else
 using Tools.DotNETCommon;
+#endif
 using UnrealBuildTool;
 
 public class UnLua : ModuleRules
@@ -24,7 +28,7 @@ public class UnLua : ModuleRules
         SetupScripts();
 
         bEnforceIWYU = false;
-
+        bUseUnity = false;
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
         PublicIncludePaths.AddRange(
@@ -87,6 +91,8 @@ public class UnLua : ModuleRules
         loadBoolConfig("bEnableRPCCall", "SUPPORTS_RPC_CALL", true);
         loadBoolConfig("bEnableCallOverriddenFunction", "ENABLE_CALL_OVERRIDDEN_FUNCTION", true);
         loadBoolConfig("bWithUENamespace", "WITH_UE4_NAMESPACE", true);
+        loadBoolConfig("bLegacyReturnOrder", "UNLUA_LEGACY_RETURN_ORDER", false);
+        loadBoolConfig("bLegacyBlueprintPath", "UNLUA_LEGACY_BLUEPRINT_PATH", false);
     }
 
     private void SetupScripts()
@@ -99,7 +105,7 @@ public class UnLua : ModuleRules
 
         var SrcPath = Path.Combine(PluginContentDirectory, UnLuaSourceFileName);
         var DstPath = Path.Combine(DefaultScriptDirectory, UnLuaSourceFileName);
-        if (!File.Exists(DstPath))
+        if (!File.Exists(DstPath) && File.Exists(SrcPath))
             File.Copy(SrcPath, DstPath);
     }
 }

@@ -12,6 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 // See the License for the specific language governing permissions and limitations under the License.
 
+#include "Engine/World.h"
+#include "Components/InputComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "LuaEnv.h"
 #include "Binding.h"
 #include "LowLevel.h"
@@ -26,8 +29,6 @@
 #include "UnLuaDelegates.h"
 #include "UnLuaInterface.h"
 #include "UnLuaLegacy.h"
-#include "Components/InputComponent.h"
-#include "GameFramework/PlayerController.h"
 
 namespace UnLua
 {
@@ -39,10 +40,6 @@ namespace UnLua
     FLuaEnv::FLuaEnv()
     {
         RegisterDelegates();
-
-        Manager = NewObject<UUnLuaManager>();
-        Manager->Env = this;
-        Manager->AddToRoot();
 
         L = lua_newstate(GetLuaAllocator(), nullptr);
         AllEnvs.Add(L, this);
@@ -108,17 +105,17 @@ namespace UnLua
 
         // register statically exported classes
         auto ExportedNonReflectedClasses = GetExportedNonReflectedClasses();
-        for (const auto Pair : ExportedNonReflectedClasses)
+        for (const auto& Pair : ExportedNonReflectedClasses)
             Pair.Value->Register(L);
 
         // register statically exported global functions
         auto ExportedFunctions = GetExportedFunctions();
-        for (const auto Function : ExportedFunctions)
+        for (const auto& Function : ExportedFunctions)
             Function->Register(L);
 
         // register statically exported enums
         auto ExportedEnums = GetExportedEnums();
-        for (const auto Enum : ExportedEnums)
+        for (const auto& Enum : ExportedEnums)
             Enum->Register(L);
 
         DoString(R"(
@@ -139,9 +136,11 @@ namespace UnLua
         lua_close(L);
         AllEnvs.Remove(L);
 
-        Manager->Cleanup();
-        Manager->RemoveFromRoot();
-        Manager = nullptr;
+        if (Manager)
+        {
+            Manager->Cleanup();
+            Manager->RemoveFromRoot();
+        }
 
         AutoObjectReference.Clear();
         ManualObjectReference.Clear();
@@ -180,7 +179,8 @@ namespace UnLua
     {
         UObject* Object = (UObject*)ObjectBase;
         FunctionRegistry->NotifyUObjectDeleted(Object);
-        Manager->NotifyUObjectDeleted(Object);
+        if (Manager)
+            Manager->NotifyUObjectDeleted(Object);
         ObjectRegistry->NotifyUObjectDeleted(Object);
 
         if (CandidateInputComponents.Num() <= 0)
@@ -267,7 +267,7 @@ namespace UnLua
             if (!GLuaDynamicBinding.IsValid(Class))
                 return false;
 
-            return Manager->Bind(Object, Class, *GLuaDynamicBinding.ModuleName, GLuaDynamicBinding.InitializerTableRef);
+            return GetManager()->Bind(Object, *GLuaDynamicBinding.ModuleName, GLuaDynamicBinding.InitializerTableRef);
         }
 
         // filter some object in bp nest case
@@ -319,7 +319,7 @@ namespace UnLua
         }
 #endif
 
-        return Manager->Bind(Object, Class, *ModuleName, GLuaDynamicBinding.InitializerTableRef);
+        return GetManager()->Bind(Object, *ModuleName, GLuaDynamicBinding.InitializerTableRef);
     }
 
     bool FLuaEnv::DoString(const FString& Chunk, const FString& ChunkName)
@@ -396,6 +396,17 @@ namespace UnLua
         luaL_unref(L, LUA_REGISTRYINDEX, ThreadRef); // remove the reference if the coroutine finishes its execution
     }
 
+    UUnLuaManager* FLuaEnv::GetManager()
+    {
+        if (!Manager)
+        {
+            Manager = NewObject<UUnLuaManager>();
+            Manager->Env = this;
+            Manager->AddToRoot();
+        }
+        return Manager;
+    }
+    
     void FLuaEnv::AddThread(lua_State* Thread, int32 ThreadRef)
     {
         ThreadToRef.Add(Thread, ThreadRef);
@@ -454,10 +465,10 @@ namespace UnLua
             // legacy support
             const FString FileName(UTF8_TO_TCHAR(lua_tostring(L, 1)));
             TArray<uint8> Data;
-            FString RealFilePath;
-            if (FUnLuaDelegates::CustomLoadLuaFile.Execute(FileName, Data, RealFilePath))
+            FString ChunkName(TEXT("chunk"));
+            if (FUnLuaDelegates::CustomLoadLuaFile.Execute(*Env, FileName, Data, ChunkName))
             {
-                if (Env->LoadString(Data))
+                if (Env->LoadString(Data, ChunkName))
                     return 1;
 
                 return luaL_error(L, "file loading from custom loader error");
@@ -471,13 +482,13 @@ namespace UnLua
         const FString FileName(UTF8_TO_TCHAR(lua_tostring(L, 1)));
 
         TArray<uint8> Data;
-        FString RealFilePath;
+        FString ChunkName(TEXT("chunk"));
         for (auto Loader : Env->CustomLoaders)
         {
-            if (!Loader.Execute(FileName, Data, RealFilePath))
+            if (!Loader.Execute(FileName, Data, ChunkName))
                 continue;
 
-            if (Env->LoadString(Data))
+            if (Env->LoadString(Data, ChunkName))
                 break;
 
             return luaL_error(L, "file loading from custom loader error");
@@ -533,17 +544,24 @@ namespace UnLua
 
     void FLuaEnv::OnAsyncLoadingFlushUpdate()
     {
+        TArray<FWeakObjectPtr> CandidatesTemp;
+        TArray<int> CandidatesRemovedIndexes;
+
         TArray<UObject*> LocalCandidates;
         {
-            FScopeLock Lock(&CandidatesLock);
-
-            for (int32 i = Candidates.Num() - 1; i >= 0; --i)
             {
-                FWeakObjectPtr ObjectPtr = Candidates[i];
+                FScopeLock Lock(&CandidatesLock);
+                CandidatesTemp.Append(Candidates);    
+            }
+
+
+            for (int32 i = CandidatesTemp.Num() - 1; i >= 0; --i)
+            {
+                FWeakObjectPtr ObjectPtr = CandidatesTemp[i];
                 if (!ObjectPtr.IsValid())
                 {
                     // discard invalid objects
-                    Candidates.RemoveAt(i);
+                    CandidatesRemovedIndexes.Add(i);
                     continue;
                 }
 
@@ -557,7 +575,15 @@ namespace UnLua
                 }
 
                 LocalCandidates.Add(Object);
-                Candidates.RemoveAt(i);
+                CandidatesRemovedIndexes.Add(i);
+            }
+        }
+
+        {
+            FScopeLock Lock(&CandidatesLock);
+            for(int32 j = 0; j < CandidatesRemovedIndexes.Num();++j)
+            {
+                Candidates.RemoveAt(CandidatesRemovedIndexes[j]);
             }
         }
 

@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.2.1] - 2022-5-25
+
+### Added
+- TArray/TMap 支持 `pairs` 遍历
+- TArray 支持使用 `[]` 访问与获取元素，等同于 `Get()` 和 `Set()`
+- TArray/TMap/TSet 的 `Num` 接口，作为 `Length` 的别名
+- 容器支持使用 `UStruct` 作为元素
+- 增加 `UNLUA_LEGACY_RETURN_ORDER` 配置项，以兼容老项目返回值顺序的问题
+- 增加 `UNLUA_LEGACY_BLUEPRINT_PATH` 配置项，以兼容老项目资源路径的问题
+- 按住`Alt`点击绑定可以直接快速按蓝图路径填充Lua模块路径到`GetModuleName`
+
+### Fixed
+- 从Lua侧返回一个数组给蓝图，可能导致卡死
+- UE5下编译报错找不到Tools.DotNETCommon
+- TPSProject在以客户端模式运行时报找不到GameMode的问题
+- 以-server参数启动时会出现断言 [#415](https://github.com/Tencent/UnLua/pull/415)
+- 退出编辑器时候产生崩溃 [#421](https://github.com/Tencent/UnLua/issues/421)
+- UE5主菜单不显示菜单按钮的问题 [#422](https://github.com/Tencent/UnLua/issues/422)
+- UE5下非const引用参数返回顺序异常
+- UE4.25下一些编译报错
+- 导出非UENUM的枚举成员类型异常 [#425](https://github.com/Tencent/UnLua/issues/425)
+- 使用CustomLoader导致打印堆栈时无法显示文件名 [#429](https://github.com/Tencent/UnLua/pull/429)
+- UE5动画通知调用组件Lua覆写函数崩溃 [#430](https://github.com/Tencent/UnLua/issues/430)
+- Lua调用的函数返回蓝图结构体会check [#432](https://github.com/Tencent/UnLua/issues/432)
+- 执行带返回值的委托时，无法从lua返回值
+
 ## [2.2.0] - 2022-5-7
 
 ### Added

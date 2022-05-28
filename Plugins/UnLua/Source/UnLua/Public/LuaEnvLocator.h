@@ -15,6 +15,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/GameInstance.h"
 #include "LuaEnv.h"
 #include "LuaEnvLocator.generated.h"
 
@@ -23,13 +24,6 @@ class UNLUA_API ULuaEnvLocator : public UObject
 {
     GENERATED_BODY()
 public:
-    ULuaEnvLocator()
-    {
-        if (HasAnyFlags(RF_ClassDefaultObject))
-            return;
-        Env = MakeShared<UnLua::FLuaEnv>();
-    }
-
     virtual TSharedPtr<UnLua::FLuaEnv> Locate(const UObject* Object);
 
     virtual void HotReload();
@@ -50,5 +44,7 @@ public:
 
     virtual void Reset() override;
 
-    TMap<UGameInstance*, TSharedPtr<UnLua::FLuaEnv>> Envs;
+    TSharedPtr<UnLua::FLuaEnv> GetDefault();
+
+    TMap<TWeakObjectPtr<UGameInstance>, TSharedPtr<UnLua::FLuaEnv>> Envs;
 };

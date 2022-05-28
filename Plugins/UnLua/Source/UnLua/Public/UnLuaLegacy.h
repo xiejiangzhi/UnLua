@@ -744,7 +744,7 @@ namespace UnLua
         lua_pushcfunction(L, ReportLuaCallError);
 
         lua_pushstring(L, FuncName);
-        int32 Type = lua_gettable(L, Index - 2);
+        int32 Type = lua_gettable(L, Index);
         if (Type != LUA_TFUNCTION)
         {
             UE_LOG(LogUnLua, Warning, TEXT("Function %s of table doesn't exist!"), UTF8_TO_TCHAR(FuncName));
@@ -928,7 +928,7 @@ namespace UnLua
     /**
      * Helper for generic type operation
      */
-    template <typename T, bool IsEnum = TIsEnum<T>::Value>
+    template <typename T, bool IsEnum = TIsEnum<typename TRemoveReference<T>::Type>::Value>
     struct TGenericTypeHelper
     {
         static int32 Push(lua_State *L, T &&V, bool bCopy)

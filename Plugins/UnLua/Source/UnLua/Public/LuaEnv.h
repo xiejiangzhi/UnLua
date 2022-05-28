@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "Engine/EngineBaseTypes.h"
 #include "Registries/ObjectRegistry.h"
 #include "Registries/ClassRegistry.h"
 #include "Registries/DelegateRegistry.h"
@@ -22,7 +23,6 @@
 #include "Registries/EnumRegistry.h"
 #include "UnLuaManager.h"
 #include "lua.h"
-#include "LuaValue.h"
 #include "ObjectReferencer.h"
 #include "HAL/Platform.h"
 
@@ -91,7 +91,7 @@ namespace UnLua
 
         void ResumeThread(int32 ThreadRef);
 
-        FORCEINLINE UUnLuaManager* GetManager() const { return Manager; }
+        UUnLuaManager* GetManager();
 
         FORCEINLINE TSharedPtr<FClassRegistry> GetClassRegistry() const { return ClassRegistry; }
 
@@ -142,7 +142,7 @@ namespace UnLua
         FCriticalSection CandidatesLock;
         FObjectReferencer AutoObjectReference;
         FObjectReferencer ManualObjectReference;
-        UUnLuaManager* Manager;
+        UUnLuaManager* Manager = nullptr;
         TSharedPtr<FClassRegistry> ClassRegistry;
         TSharedPtr<FObjectRegistry> ObjectRegistry;
         TSharedPtr<FDelegateRegistry> DelegateRegistry;
