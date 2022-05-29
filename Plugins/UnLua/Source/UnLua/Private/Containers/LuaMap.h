@@ -325,23 +325,6 @@ public:
     }
 
     /**
-     * GetKey
-     */
-    FORCEINLINE void* GetKey(int32 Index) const
-    {
-        if (KeyInterface && IsValidIndex(Index))
-        {
-            int32 KeyOffset = 0;
-#if ENGINE_MAJOR_VERSION <= 4 && ENGINE_MINOR_VERSION < 22
-            KeyOffset = MapLayout.KeyOffset;
-#endif
-            return (uint8*)Map->GetData(Index, MapLayout) + KeyOffset;
-        }
-        return nullptr;
-    }
-
-
-    /**
      * Convert the values to an array
      *
      * @param OutArray - the memory the result array resides
