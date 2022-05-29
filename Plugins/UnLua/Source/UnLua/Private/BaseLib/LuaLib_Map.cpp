@@ -519,7 +519,16 @@ static int32 TMap_Merge(lua_State *L)
         return 0;
     }
 
-    // TODO: Check Two map is the same type
+    if (!IsSameTypeInterface(Map->KeyInterface, OtherMap->KeyInterface)) {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Different TMap key type!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
+    if (!IsSameTypeInterface(Map->ValueInterface, OtherMap->ValueInterface)) {
+        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Different TMap value type!"), ANSI_TO_TCHAR(__FUNCTION__));
+        return 0;
+    }
+
     Map->KeyInterface->Initialize(Map->ElementCache);
     void *MemData = FMemory::Malloc(sizeof(FLuaArray), alignof(FLuaArray));
     FLuaArray *Keys = OtherMap->Keys(MemData);

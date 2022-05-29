@@ -1,15 +1,15 @@
 // Tencent is pleased to support the open source community by making UnLua available.
-// 
+//
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the MIT License (the "License"); 
+// Licensed under the MIT License (the "License");
 // you may not use this file except in compliance with the License. You may obtain a copy of the License at
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, 
-// software distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
 #include "LowLevel.h"
@@ -175,10 +175,10 @@ namespace UnLua
                 // check metatable is same?
                 bool bMTSame = false;
                 if (lua_getmetatable(L, -1))
-                {   
+                {
                     luaL_getmetatable(L, MetatableName);
                     if (lua_rawequal(L,-1,-2))
-                    {   
+                    {
                         bMTSame = true;
                     }
 
@@ -461,6 +461,18 @@ namespace UnLua
         FScriptMap *ScriptMap = (FScriptMap*)GetScriptContainer(L, Index);
         return ScriptMap;
     }
+
+    bool IsSameTypeInterface(TSharedPtr<ITypeInterface> A, TSharedPtr<ITypeInterface> B) {
+        auto PropertyA = A->GetUProperty();
+        auto PropertyB = B->GetUProperty();
+        if (PropertyA && PropertyB) {
+            return PropertyA->SameType(PropertyB);
+        } else {
+            auto NameA = A->GetName();
+            return NameA != TEXT("") && NameA != TEXT("None") && NameA == B->GetName();
+        }
+   }
+
 
     /**
      * Helper to recover Lua stack automatically

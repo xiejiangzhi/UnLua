@@ -1,15 +1,15 @@
 // Tencent is pleased to support the open source community by making UnLua available.
-// 
+//
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the MIT License (the "License"); 
+// Licensed under the MIT License (the "License");
 // you may not use this file except in compliance with the License. You may obtain a copy of the License at
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, 
-// software distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
 #pragma once
@@ -28,16 +28,16 @@ struct lua_State;
 struct luaL_Reg;
 
 namespace UnLua
-{   
+{
     bool IsUObjectValid(UObjectBase* ObjPtr);
 
     /**
      * Interface to manage Lua stack for a C++ type
      */
     struct ITypeOps
-    {   
+    {
         ITypeOps() { StaticExported = false; };
-        
+
         virtual void Read(lua_State *L, const void *ContainerPtr, bool bCreateCopy) const = 0;
         virtual void Write(lua_State *L, void *ContainerPtr, int32 IndexInStack) const = 0;
 
@@ -70,10 +70,10 @@ namespace UnLua
      * Exported property interface
      */
     struct IExportedProperty : public ITypeOps
-    {   
+    {
         IExportedProperty() { StaticExported = true;}
 		virtual ~IExportedProperty() {}
-       
+
 
         virtual void Register(lua_State *L) = 0;
 
@@ -157,7 +157,7 @@ namespace UnLua
     UNLUA_API void Shutdown();
 
     UNLUA_API bool IsEnabled();
- 
+
     /**
      * Load a Lua chunk without running it
      *
@@ -301,6 +301,9 @@ namespace UnLua
      * @return - the untyped map
      */
     UNLUA_API FScriptMap* GetMap(lua_State *L, int32 Index);
+
+
+    UNLUA_API bool IsSameTypeInterface(TSharedPtr<ITypeInterface> A, TSharedPtr<ITypeInterface> B);
 
 
     /**
