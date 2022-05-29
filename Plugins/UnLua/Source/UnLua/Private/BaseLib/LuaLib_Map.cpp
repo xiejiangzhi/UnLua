@@ -70,38 +70,44 @@ static int TMap_Enumerable(lua_State* L)
         return 0;
     }
 
-    auto ScriptMapHelper = FScriptMapHelper::CreateHelperFormInnerProperties(
-        Map->KeyInterface->GetUProperty(), Map->ValueInterface->GetUProperty(), Map->Map);
+    // auto ScriptMapHelper = FScriptMapHelper::CreateHelperFormInnerProperties(
+    //     Map->KeyInterface->GetUProperty(), Map->ValueInterface->GetUProperty(), Map->Map);
 
-    while ((*Enumerator)->Index < ScriptMapHelper.GetMaxIndex())
-    {
-        if (!ScriptMapHelper.IsValidIndex((*Enumerator)->Index))
+    // while ((*Enumerator)->Index < Map->Num())
+    // {
+        if (!Map->Map->IsValidIndex((*Enumerator)->Index))
         {
             ++(*Enumerator)->Index;
         }
         else
         {
-            Map->KeyInterface->Initialize(Map->ElementCache);
+            // Map->KeyInterface->Initialize(Map->ElementCache);
+            // void* ValueCache = (uint8*)Map->ElementCache + Map->MapLayout.ValueOffset;
+            // Map->KeyInterface->Initialize(Map->ElementCache);
+            // Map->ValueInterface->Initialize(ValueCache);
+            // Map->KeyInterface->Read(L, ScriptMapHelper.GetKeyPtr((*Enumerator)->Index), true);
+            // Map->ValueInterface->Read(L, ScriptMapHelper.GetValuePtr((*Enumerator)->Index), true);
+            // Map->KeyInterface->Destruct(Map->ElementCache);
+            // Map->ValueInterface->Destruct(ValueCache);
 
-            void* ValueCache = (uint8*)Map->ElementCache + Map->MapLayout.ValueOffset;
-
-            Map->KeyInterface->Initialize(Map->ElementCache);
-
-            Map->ValueInterface->Initialize(ValueCache);
-
-            Map->KeyInterface->Read(L, ScriptMapHelper.GetKeyPtr((*Enumerator)->Index), true);
-
-            Map->ValueInterface->Read(L, ScriptMapHelper.GetValuePtr((*Enumerator)->Index), true);
-
-            Map->KeyInterface->Destruct(Map->ElementCache);
-
-            Map->ValueInterface->Destruct(ValueCache);
+            void *Key = Map->GetKey((*Enumerator)->Index);
+            Map->KeyInterface->Read(L, Key, false);
+            void *Value = Map->Find(Key);
+            if (Value)
+            {
+                Key = (uint8*)Value - Map->ValueInterface->GetOffset();
+                Map->ValueInterface->Read(L, Key, false);
+            }
+            else
+            {
+                lua_pushnil(L);
+            }
 
             ++(*Enumerator)->Index;
 
             return 2;
         }
-    }
+    // }
 
     return 0;
 }

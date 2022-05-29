@@ -66,17 +66,14 @@ static int TArray_Enumerable(lua_State* L)
     if (Array->IsValidIndex((*Enumerator)->Index))
     {
         UnLua::Push(L, (*Enumerator)->Index + 1);
+        // Array->Inner->Initialize(Array->ElementCache);
+        // Array->Get((*Enumerator)->Index, Array->ElementCache);
+        // Array->Inner->Read(L, Array->ElementCache, true);
+        // Array->Inner->Destruct(Array->ElementCache);
 
-        Array->Inner->Initialize(Array->ElementCache);
-
-        Array->Get((*Enumerator)->Index, Array->ElementCache);
-
-        Array->Inner->Read(L, Array->ElementCache, true);
-
-        Array->Inner->Destruct(Array->ElementCache);
-
+        const void *Element = Array->GetData((*Enumerator)->Index);
+        Array->Inner->Read(L, Element, false);
         (*Enumerator)->Index += (*Enumerator)->Increment;
-
         return 2;
     }
 
