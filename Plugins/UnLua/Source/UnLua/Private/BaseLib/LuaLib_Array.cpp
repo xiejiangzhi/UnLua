@@ -849,8 +849,8 @@ static const luaL_Reg TArrayLib[] =
     { "__gc", TArray_Delete },
     { "__call", TArray_New },
     { "__pairs", TArray_Pairs },
-    { "__index", TArray_Index },
-    { "__newindex", TArray_NewIndex },
+    // { "__index", TArray_Index },
+    // { "__newindex", TArray_NewIndex },
     { nullptr, nullptr }
 };
 
