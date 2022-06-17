@@ -1,11 +1,3 @@
---
--- DESCRIPTION
---
--- @COMPANY **
--- @AUTHOR **
--- @DATE ${date} ${time}
---
-
 require "UnLua"
 
 local M = Class()

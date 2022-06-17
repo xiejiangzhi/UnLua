@@ -79,7 +79,6 @@ static int TMap_Enumerable(lua_State* L)
         else
         {
             Map->KeyInterface->Read(L, Map->GetData((*Enumerator)->Index), false);
-
             Map->ValueInterface->Read(
                 L, Map->GetData((*Enumerator)->Index) + Map->MapLayout.ValueOffset - Map->ValueInterface->GetOffset(),
                 false);
@@ -88,7 +87,7 @@ static int TMap_Enumerable(lua_State* L)
 
             return 2;
         }
-    // }
+    }
 
     return 0;
 }

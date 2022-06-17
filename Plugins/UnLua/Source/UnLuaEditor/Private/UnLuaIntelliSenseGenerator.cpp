@@ -1,15 +1,15 @@
 // Tencent is pleased to support the open source community by making UnLua available.
-// 
+//
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the MIT License (the "License"); 
+// Licensed under the MIT License (the "License");
 // you may not use this file except in compliance with the License. You may obtain a copy of the License at
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, 
-// software distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
 #include "UnLuaIntelliSenseGenerator.h"
@@ -41,11 +41,11 @@ void FUnLuaIntelliSenseGenerator::Initialize()
 
     OutputDir = IPluginManager::Get().FindPlugin("UnLua")->GetBaseDir() + "/Intermediate/";
 
-    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-    AssetRegistryModule.Get().OnAssetAdded().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetAdded);
-    AssetRegistryModule.Get().OnAssetRemoved().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetRemoved);
-    AssetRegistryModule.Get().OnAssetRenamed().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetRenamed);
-    AssetRegistryModule.Get().OnAssetUpdated().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetUpdated);
+    // FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+    // AssetRegistryModule.Get().OnAssetAdded().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetAdded);
+    // AssetRegistryModule.Get().OnAssetRemoved().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetRemoved);
+    // AssetRegistryModule.Get().OnAssetRenamed().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetRenamed);
+    // AssetRegistryModule.Get().OnAssetUpdated().AddRaw(this, &FUnLuaIntelliSenseGenerator::OnAssetUpdated);
 
     bInitialized = true;
 }
@@ -202,7 +202,7 @@ void FUnLuaIntelliSenseGenerator::OnAssetAdded(const FAssetData& AssetData)
 {
     if (!ShouldExport(AssetData))
         return;
-    
+
     OnAssetUpdated(AssetData);
 
     TArray<const UField*> Types;
@@ -227,7 +227,7 @@ void FUnLuaIntelliSenseGenerator::OnAssetRenamed(const FAssetData& AssetData, co
     const FString OldPackageName = FPackageName::GetShortName(OldPath);
     DeleteFile("/Game", OldPackageName);
 
-    //update new name 
+    //update new name
     OnAssetUpdated(AssetData);
 }
 

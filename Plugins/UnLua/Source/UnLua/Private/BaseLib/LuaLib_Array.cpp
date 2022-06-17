@@ -66,8 +66,7 @@ static int TArray_Enumerable(lua_State* L)
     if (Array->IsValidIndex((*Enumerator)->Index))
     {
         UnLua::Push(L, (*Enumerator)->Index + 1);
-        const void *Element = Array->GetData((*Enumerator)->Index);
-        Array->Inner->Read(L, Element, false);
+        Array->Inner->Read(L, Array->GetData((*Enumerator)->Index), false);
         (*Enumerator)->Index += (*Enumerator)->Increment;
         return 2;
     }
@@ -79,7 +78,7 @@ static int32 TArray_Pairs(lua_State* L)
 {
     int32 NumParams = lua_gettop(L);
 
-    if (NumParams != 1)
+    if (NumParams < 1)
     {
         UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid parameters!"), ANSI_TO_TCHAR(__FUNCTION__));
         return 0;
@@ -850,8 +849,8 @@ static const luaL_Reg TArrayLib[] =
     { "__call", TArray_New },
     { "__pairs", TArray_Pairs },
     { "__len", TArray_Length },
-    { "__index", TArray_Index },
-    { "__newindex", TArray_NewIndex },
+    // { "__index", TArray_Index },
+    // { "__newindex", TArray_NewIndex },
     { nullptr, nullptr }
 };
 
