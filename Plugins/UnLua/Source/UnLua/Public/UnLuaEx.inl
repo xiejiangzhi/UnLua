@@ -853,15 +853,11 @@ namespace UnLua
 
         if (!bIsReflected)
         {
-#if WITH_UE4_NAMESPACE
             lua_getglobal(L, "UE");
             lua_pushstring(L, ClassName);
             lua_pushvalue(L, -3);
             lua_rawset(L, -3);
             lua_pop(L, 2);
-#else
-            lua_setglobal(L, ClassName);
-#endif
         }
     }
 
@@ -895,7 +891,7 @@ namespace UnLua
         Buffer += TEXT("\r\n");
 
         // fields
-        for (const auto Property : Properties)
+        for (const auto& Property : Properties)
         {
             Property->GenerateIntelliSense(Buffer);
         }
@@ -921,7 +917,7 @@ namespace UnLua
         Buffer += TEXT("local M = {}\r\n");
 
         // fields
-        for (const auto Property : Properties)
+        for (const auto& Property : Properties)
         {
             FString Field;
             TArray<FString> OutArray;

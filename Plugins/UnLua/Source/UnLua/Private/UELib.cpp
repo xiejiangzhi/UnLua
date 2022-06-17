@@ -15,6 +15,7 @@
 #include "lauxlib.h"
 #include "UELib.h"
 
+#include "Binding.h"
 #include "Registries/ClassRegistry.h"
 #include "LuaCore.h"
 #include "LuaEnv.h"
@@ -52,9 +53,15 @@ static int UE_Index(lua_State* L)
         return 0;
 
     const char* Name = lua_tostring(L, 2);
-    const char Prefix = Name[0];
-    // LoadUEType(Name + 1);
+    const auto Exported = UnLua::FindExportedNonReflectedClass(Name);
+    if (Exported)
+    {
+        Exported->Register(L);
+        lua_rawget(L, 1);
+        return 1;
+    }
 
+    const char Prefix = Name[0];
     const auto& Env = UnLua::FLuaEnv::FindEnvChecked(L);
     if (Prefix == 'U' || Prefix == 'A' || Prefix == 'F')
     {
@@ -90,6 +97,7 @@ static int UE_Index(lua_State* L)
             return 0;
         }
     }
+
     lua_rawget(L, 1);
     return 1;
 }
@@ -110,13 +118,19 @@ int UnLua::UELib::Open(lua_State* L)
 
     lua_setglobal(L, NAMESPACE_NAME);
 
-#if WITH_UE4_NAMESPACE
-    lua_pushboolean(L, true);
-#else
-    lua_pushboolean(L, false);
+#if WITH_UE4_NAMESPACE == 1
+    // 兼容UE4访问
+    lua_getglobal(L, NAMESPACE_NAME);
+    lua_setglobal(L, "UE4");
+#elif WITH_UE4_NAMESPACE == 0
+    // 兼容无UE4全局访问
+    lua_getglobal(L, "_G");
+    lua_newtable(L);
+    lua_pushstring(L, "__index");
+    lua_getglobal(L, NAMESPACE_NAME);
+    lua_rawset(L, -3);
+    lua_setmetatable(L, -2);
 #endif
-    
-    lua_setglobal(L, "WITH_UE4_NAMESPACE");
 
     return 1;
 }

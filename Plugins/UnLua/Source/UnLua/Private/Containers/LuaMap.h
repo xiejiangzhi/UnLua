@@ -59,6 +59,7 @@ public:
         StructBuilder.AddMember(InValueInterface->GetSize(), InValueInterface->GetAlignment());
         // allocate cache for a key-value pair with alignment
         ElementCache = FMemory::Malloc(StructBuilder.GetSize(), StructBuilder.GetAlignment());
+        UNLUA_STAT_MEMORY_ALLOC(ElementCache, ContainerElementCache);
     }
 
     FLuaMap(const FScriptMap *InScriptMap, TLuaContainerInterface<FLuaMap> *InMapInterface, FScriptMapFlag Flag = OwnedByOther)
@@ -75,6 +76,7 @@ public:
             StructBuilder.AddMember(ValueInterface->GetSize(), ValueInterface->GetAlignment());
             // allocate cache for a key-value pair with alignment
             ElementCache = FMemory::Malloc(StructBuilder.GetSize(), StructBuilder.GetAlignment());
+            UNLUA_STAT_MEMORY_ALLOC(ElementCache, ContainerElementCache);
         }
     }
 
@@ -85,6 +87,7 @@ public:
             Clear();
             delete Map;
         }
+        UNLUA_STAT_MEMORY_FREE(ElementCache, ContainerElementCache);
         FMemory::Free(ElementCache);
     }
 
@@ -99,6 +102,17 @@ public:
     {
         //return MapHelper.Num();
         return Map->Num();
+    }
+
+    /**
+     * Get the max index of the map
+     *
+     * @return - the max index of the array
+     */
+    FORCEINLINE int32 GetMaxIndex() const
+    {
+        //return MapHelper.GetMaxIndex();
+        return Map->GetMaxIndex();
     }
 
     /**
@@ -314,23 +328,6 @@ public:
     }
 
     /**
-     * GetKey
-     */
-    FORCEINLINE void* GetKey(int32 Index) const
-    {
-        if (KeyInterface && IsValidIndex(Index))
-        {
-            int32 KeyOffset = 0;
-#if ENGINE_MAJOR_VERSION <= 4 && ENGINE_MINOR_VERSION < 22
-            KeyOffset = MapLayout.KeyOffset;
-#endif
-            return (uint8*)Map->GetData(Index, MapLayout) + KeyOffset;
-        }
-        return nullptr;
-    }
-
-
-    /**
      * Convert the values to an array
      *
      * @param OutArray - the memory the result array resides
@@ -355,6 +352,11 @@ public:
             return LuaArray;
         }
         return nullptr;
+    }
+
+    FORCEINLINE bool IsValidIndex(int32 Index) const
+    {
+        return Map->IsValidIndex(Index);
     }
 
     FScriptMap *Map;
@@ -432,10 +434,5 @@ private:
         void *ValueDest = Dest + MapLayout.ValueOffset;
         KeyInterface->Initialize(Dest);
         ValueInterface->Initialize(ValueDest);
-    }
-
-    FORCEINLINE bool IsValidIndex(int32 Index) const
-    {
-        return Map->IsValidIndex(Index);
     }
 };

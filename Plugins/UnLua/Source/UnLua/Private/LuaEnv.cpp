@@ -60,6 +60,7 @@ namespace UnLua
         DelegateRegistry = MakeShared<FDelegateRegistry>(this);
         ContainerRegistry = MakeShared<FContainerRegistry>(this);
         EnumRegistry = MakeShared<FEnumRegistry>(this);
+        DeadLoopCheck = MakeShared<FDeadLoopCheck>(this);
 
         AutoObjectReference.SetName("UnLua_AutoReference");
         ManualObjectReference.SetName("UnLua_ManualReference");
@@ -237,13 +238,6 @@ namespace UnLua
 
     bool FLuaEnv::TryBind(UObject* Object)
     {
-        const bool bIsCDO = Object->HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject);
-        if (bIsCDO)
-        {
-            // filter out class default and template objects
-            return false;
-        }
-
         UClass* Class = Object->GetClass();
         if (Class->IsChildOf<UPackage>() || Class->IsChildOf<UClass>() || Class->HasAnyClassFlags(CLASS_NewerVersionExists))
         {
@@ -251,17 +245,22 @@ namespace UnLua
             return false;
         }
 
+        static UClass* InterfaceClass = UUnLuaInterface::StaticClass();
+        const bool bImplUnluaInterface = Class->ImplementsInterface(InterfaceClass);
+        
         if (!IsInGameThread() || Object->HasAnyInternalFlags(AsyncObjectFlags))
         {
-            // all bind operation should be in game thread, include dynamic bind
-            FScopeLock Lock(&CandidatesLock);
-            Candidates.AddUnique(Object);
-            return false;
+            // avoid adding too many objects, affecting performance.
+            if (bImplUnluaInterface || (!bImplUnluaInterface && GLuaDynamicBinding.IsValid(Class)))
+            {
+                // all bind operation should be in game thread, include dynamic bind
+                FScopeLock Lock(&CandidatesLock);
+                Candidates.AddUnique(Object);
+                return false;
+            }
         }
 
-        static UClass* InterfaceClass = UUnLuaInterface::StaticClass();
-
-        if (!Class->ImplementsInterface(InterfaceClass))
+        if (!bImplUnluaInterface)
         {
             // dynamic binding
             if (!GLuaDynamicBinding.IsValid(Class))
@@ -306,8 +305,12 @@ namespace UnLua
             }
         }
 
+        const bool bIsCDO = Object->HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject);
+        if ((bIsCDO && (Object->GetFlags() & RF_NeedInitialization)) || Class->GetName().Contains(TEXT("SKEL_")))
+            return false;
+
         FString ModuleName;
-        UObject* CDO = Class->GetDefaultObject();
+        UObject* CDO = bIsCDO ? Object : Class->GetDefaultObject();
         CDO->ProcessEvent(Func, &ModuleName);
         if (ModuleName.IsEmpty())
             return false;
@@ -325,7 +328,8 @@ namespace UnLua
     bool FLuaEnv::DoString(const FString& Chunk, const FString& ChunkName)
     {
         // TODO: env support
-        // TODO: return value support 
+        // TODO: return value support
+        const auto Guard = GetDeadLoopCheck()->MakeGuard();
         bool bOk = !luaL_dostring(L, TCHAR_TO_UTF8(*Chunk));
         if (bOk)
             return bOk;
@@ -614,10 +618,7 @@ namespace UnLua
     {
         if (nsize == 0)
         {
-#if STATS
-            const uint32 Size = FMemory::GetAllocSize(ptr);
-            DEC_MEMORY_STAT_BY(STAT_UnLua_Lua_Memory, Size);
-#endif
+            UNLUA_STAT_MEMORY_FREE(ptr, Lua);
             FMemory::Free(ptr);
             return nullptr;
         }
@@ -626,28 +627,12 @@ namespace UnLua
         if (!ptr)
         {
             Buffer = FMemory::Malloc(nsize);
-#if STATS
-            const uint32 Size = FMemory::GetAllocSize(Buffer);
-            INC_MEMORY_STAT_BY(STAT_UnLua_Lua_Memory, Size);
-#endif
+            UNLUA_STAT_MEMORY_ALLOC(Buffer, Lua);
         }
         else
         {
-#if STATS
-            const uint32 OldSize = FMemory::GetAllocSize(ptr);
-#endif
+            UNLUA_STAT_MEMORY_REALLOC(ptr, Buffer, Lua);
             Buffer = FMemory::Realloc(ptr, nsize);
-#if STATS
-            const uint32 NewSize = FMemory::GetAllocSize(Buffer);
-            if (NewSize > OldSize)
-            {
-                INC_MEMORY_STAT_BY(STAT_UnLua_Lua_Memory, NewSize - OldSize);
-            }
-            else
-            {
-                DEC_MEMORY_STAT_BY(STAT_UnLua_Lua_Memory, OldSize - NewSize);
-            }
-#endif
         }
         return Buffer;
     }

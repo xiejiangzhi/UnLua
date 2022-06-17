@@ -66,11 +66,6 @@ static int TArray_Enumerable(lua_State* L)
     if (Array->IsValidIndex((*Enumerator)->Index))
     {
         UnLua::Push(L, (*Enumerator)->Index + 1);
-        // Array->Inner->Initialize(Array->ElementCache);
-        // Array->Get((*Enumerator)->Index, Array->ElementCache);
-        // Array->Inner->Read(L, Array->ElementCache, true);
-        // Array->Inner->Destruct(Array->ElementCache);
-
         const void *Element = Array->GetData((*Enumerator)->Index);
         Array->Inner->Read(L, Element, false);
         (*Enumerator)->Index += (*Enumerator)->Increment;
@@ -94,7 +89,6 @@ static int32 TArray_Pairs(lua_State* L)
 
     if (!Array)
     {
-        UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid TArray!"), ANSI_TO_TCHAR(__FUNCTION__));
         return 0;
     }
 

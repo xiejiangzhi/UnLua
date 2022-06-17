@@ -14,11 +14,13 @@
 
 #pragma once
 
+#include "Tickable.h"
 #include "Engine/DataTable.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "GameFramework/Character.h"
 #include "UnLua.h"
+#include "UnLuaInterface.h"
 #include "UnLuaTestHelpers.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUnLuaTestSimpleEvent);
@@ -54,6 +56,14 @@ enum class EEnumClass
     Value2 = 2
 };
 
+UENUM(BlueprintType)
+enum class EUnLuaTestEnum : uint8
+{
+    None = 0 UMETA(DisplayName = "无"),
+    Value1 = 1 UMETA(DisplayName = "数值1"),
+    Value2 = 2 UMETA(DisplayName = "数值2"),
+};
+
 UCLASS()
 class UNLUATESTSUITE_API UUnLuaTestStub : public UObject
 {
@@ -81,7 +91,7 @@ public:
     EScopedEnum::Type ScopedEnum;
 
     EEnumClass EnumClass;
-    
+
     UFUNCTION(BlueprintCallable)
     void AddCount() { Counter++; }
 
@@ -95,9 +105,34 @@ public:
         MapForIssue407.Add(1, 1);
         MapForIssue407.Add(2, 2);
     }
-    
+
     UFUNCTION(BlueprintCallable)
     int32 TestForIssue407(TArray<int32> Array);
+};
+
+UCLASS()
+class UNLUATESTSUITE_API UUnLuaTestStubForIssue446 : public UObject, public FTickableGameObject, public IUnLuaInterface
+{
+    GENERATED_BODY()
+
+public:
+    virtual FString GetModuleName_Implementation() const override
+    {
+        return TEXT("Tests.Regression.Issue446.TestStub");
+    }
+    
+    UFUNCTION(BlueprintImplementableEvent)
+    void Test();
+
+    virtual void Tick(float DeltaTime) override
+    {
+        Test();
+    }
+    
+    virtual TStatId GetStatId() const override
+    {
+        return GetStatID();
+    }
 };
 
 UCLASS()
@@ -111,6 +146,9 @@ public:
 
     UFUNCTION(BlueprintImplementableEvent)
     bool TestForIssue328();
+
+    UFUNCTION(BlueprintImplementableEvent)
+    TSubclassOf<UUserWidget> TestForIssue445(int32 Index);
 };
 
 USTRUCT(BlueprintType)
@@ -166,7 +204,7 @@ class UNLUATESTSUITE_API UUnLuaTestFunctionLibrary : public UBlueprintFunctionLi
         C++;
         return true;
     }
-    
+
     UFUNCTION(BlueprintCallable)
     static int32 TestForIssue293(const FString& A, int32 B, const TArray<FColor>& C) { return C.Num(); }
 

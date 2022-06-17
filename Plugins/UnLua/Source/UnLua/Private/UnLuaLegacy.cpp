@@ -18,6 +18,7 @@
 DEFINE_STAT(STAT_UnLua_Lua_Memory);
 DEFINE_STAT(STAT_UnLua_PersistentParamBuffer_Memory);
 DEFINE_STAT(STAT_UnLua_OutParmRec_Memory);
+DEFINE_STAT(STAT_UnLua_ContainerElementCache_Memory);
 
 namespace UnLua
 {
@@ -44,15 +45,11 @@ namespace UnLua
             lua_rawset(L, -3);
         }
 
-#if WITH_UE4_NAMESPACE
         lua_getglobal(L, "UE");
         lua_pushstring(L, EnumName.Get());
         lua_pushvalue(L, -3);
         lua_rawset(L, -3);
         lua_pop(L, 2);
-#else
-        lua_setglobal(L, EnumName.Get());
-#endif
     }
 
 #if WITH_EDITOR

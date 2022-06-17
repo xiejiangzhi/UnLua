@@ -22,6 +22,7 @@
 #include "UnLuaDebugBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "LuaDeadLoopCheck.h"
 
 /**
  * Function descriptor constructor
@@ -61,10 +62,7 @@ FFunctionDesc::FFunctionDesc(UFunction *InFunction, FParameterCollection *InDefa
     {
         Buffer = FMemory::Malloc(InFunction->ParmsSize, 16);
         FMemory::Memzero(Buffer, InFunction->ParmsSize);
-#if STATS
-        const uint32 Size = FMemory::GetAllocSize(Buffer);
-        INC_MEMORY_STAT_BY(STAT_UnLua_PersistentParamBuffer_Memory, Size);
-#endif
+        UNLUA_STAT_MEMORY_ALLOC(Buffer, Lua)
     }
 #endif
 
@@ -96,10 +94,7 @@ FFunctionDesc::FFunctionDesc(UFunction *InFunction, FParameterCollection *InDefa
             // pre-create OutParmRec for 'out' property
 #if !SUPPORTS_RPC_CALL
             FOutParmRec *Out = (FOutParmRec*)FMemory::Malloc(sizeof(FOutParmRec), alignof(FOutParmRec));
-#if STATS
-            const uint32 Size = FMemory::GetAllocSize(Out);
-            INC_MEMORY_STAT_BY(STAT_UnLua_OutParmRec_Memory, Size);
-#endif
+            UNLUA_STAT_MEMORY_ALLOC(Out, OutParmRec);
             Out->PropAddr = Property->ContainerPtrToValuePtr<uint8>(Buffer);
             Out->Property = Property;
             if (CurrentOutParmRec)
@@ -154,10 +149,7 @@ FFunctionDesc::~FFunctionDesc()
 #if ENABLE_PERSISTENT_PARAM_BUFFER
     if (Buffer)
     {
-#if STATS
-        const uint32 Size = FMemory::GetAllocSize(Buffer);
-        DEC_MEMORY_STAT_BY(STAT_UnLua_PersistentParamBuffer_Memory, Size);
-#endif
+        UNLUA_STAT_MEMORY_FREE(Buffer, PersistentParamBuffer);
         FMemory::Free(Buffer);
     }
 #endif
@@ -167,10 +159,7 @@ FFunctionDesc::~FFunctionDesc()
     while (OutParmRec)
     {
         FOutParmRec *NextOut = OutParmRec->NextOutParm;
-#if STATS
-        const uint32 Size = FMemory::GetAllocSize(OutParmRec);
-        DEC_MEMORY_STAT_BY(STAT_UnLua_OutParmRec_Memory, Size);
-#endif
+        UNLUA_STAT_MEMORY_FREE(OutParmRec, OutParmRec);
         FMemory::Free(OutParmRec);
         OutParmRec = NextOut;
     }
@@ -208,7 +197,7 @@ void FFunctionDesc::CallLua(lua_State* L, lua_Integer FunctionRef, lua_Integer S
         {
             if (Property->PropertyFlags & CPF_OutParm)
             {
-                Stack.Step(Stack.Object, nullptr);
+                Stack.Step(Stack.Object, Property->ContainerPtrToValuePtr<uint8>(InParms));
 
                 CA_SUPPRESS(6263)
                 FOutParmRec* Out = (FOutParmRec*)FMemory_Alloca(sizeof(FOutParmRec));
@@ -614,18 +603,6 @@ bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *O
             continue;
         }
 
-        const bool bIsOutParameter = static_cast<bool>(Property->GetProperty()->PropertyFlags & CPF_OutParm);
-        if (bIsOutParameter)
-        {
-            OutParam = FindOutParmRec(OutParam, Property->GetProperty());
-            if (OutParam)
-            {
-                Property->GetValueInternal(L, OutParam->PropAddr, false);
-                OutParam = OutParam->NextOutParm;
-                continue;
-            }
-        }
-
         Property->GetValue(L, InParams, false);
     }
 
@@ -640,6 +617,9 @@ bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *O
     {
         NumResult++;
     }
+
+    const auto& Env = UnLua::FLuaEnv::FindEnvChecked(L);
+    const auto Guard = Env.GetDeadLoopCheck()->MakeGuard();
     bool bSuccess = CallFunction(L, NumParams, NumResult);      // pcall
     if (!bSuccess)
     {
@@ -705,7 +685,7 @@ bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *O
 #if UNLUA_LEGACY_RETURN_ORDER
             constexpr auto IndexInStack = -1;
 #else
-            const auto IndexInStack = -NumParams;
+            const auto IndexInStack = -NumResult;
 #endif
             
             // set value for blueprint side return property
