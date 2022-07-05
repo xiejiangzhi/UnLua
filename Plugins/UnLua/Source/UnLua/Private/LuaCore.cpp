@@ -1,15 +1,15 @@
 // Tencent is pleased to support the open source community by making UnLua available.
-// 
+//
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the MIT License (the "License"); 
+// Licensed under the MIT License (the "License");
 // you may not use this file except in compliance with the License. You may obtain a copy of the License at
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, 
-// software distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
 #include "CollisionHelper.h"
@@ -488,7 +488,7 @@ void* CacheScriptContainer(lua_State *L, void *Key, const FScriptContainerDesc &
     void *Userdata = nullptr;
     lua_getfield(L, LUA_REGISTRYINDEX, "ScriptContainerMap");
     lua_pushlightuserdata(L, Key);
-    int32 Type = lua_rawget(L, -2);             
+    int32 Type = lua_rawget(L, -2);
     if (Type == LUA_TNIL)
     {
         lua_pop(L, 1);
@@ -562,7 +562,7 @@ void PushObjectCore(lua_State *L, UObjectBaseUtility *Object)
 		lua_pushnil(L);
 		return;
     }
-    
+
 #if UNLUA_ENABLE_DEBUG != 0
 	UE_LOG(LogUnLua, Log, TEXT("%s : %p,%s,%s"), ANSI_TO_TCHAR(__FUNCTION__), Object,*Object->GetName(), *MetatableName);
 #endif
@@ -837,7 +837,7 @@ int32 GetDelegateInfo(lua_State *L, int32 Index, UObject* &Object, const void* &
 }
 
 /**
- * Callback function to get function name 
+ * Callback function to get function name
  */
 static bool GetFunctionName(lua_State *L, void *Userdata)
 {
@@ -872,7 +872,7 @@ bool GetFunctionList(lua_State *L, const char *InModuleName, TSet<FName> &Functi
 
     int32 N = 1;
     bool bNext = false;
-    do 
+    do
     {
         bNext = TraverseTable(L, -1, &FunctionNames, GetFunctionName) > INDEX_NONE;
         if (bNext)
@@ -1102,7 +1102,7 @@ void AddPackagePath(lua_State *L, const char *Path)
  * package.loaded[ModuleName] = nil
  */
 void ClearLoadedModule(lua_State *L, const char *ModuleName)
-{   
+{
     if (L)
     {
         if (!ModuleName)
@@ -1501,27 +1501,57 @@ int32 Global_Print(lua_State *L)
 int32 Enum_Index(lua_State *L)
 {
     // 1: meta table of the Enum; 2: entry name in Enum
-    
+
     check(lua_isstring(L, -1));
     lua_pushstring(L, "__name");        // 3
     lua_rawget(L, 1);                   // 3
     check(lua_isstring(L, -1));
-    
+
     const FEnumDesc *Enum = UnLua::FEnumRegistry::Find(lua_tostring(L, -1));
-	if ((!Enum) 
+	if ((!Enum)
         || (!Enum->IsValid()))
 	{
 		lua_pop(L, 1);
 		return 0;
 	}
-    int64 Value = Enum->GetValue(lua_tostring(L, 2));
-    
-    lua_pop(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushinteger(L, Value);
-    lua_rawset(L, 1);
-    lua_pushinteger(L, Value);
-    
+
+    if ( lua_type(L, 2) == LUA_TNUMBER) {
+        FText DisplayName = Enum->GetEnum()->GetDisplayNameTextByValue(lua_tointeger(L, 2));
+
+#if ENABLE_TYPE_CHECK == 1
+    if (DisplayName.IsEmpty()) {
+        UE_LOG(
+            LogUnLua, Warning, TEXT("Invalid enum value: %s of %s."),
+            ANSI_TO_TCHAR(lua_tostring(L, 2)), *Enum->GetEnum()->GetName()
+        );
+    }
+#endif
+
+        char* Name = TCHAR_TO_UTF8(*DisplayName.ToString());
+        lua_pop(L, 1);
+        lua_pushvalue(L, 2);
+        lua_pushstring(L, Name);
+        lua_rawset(L, 1);
+        lua_pushstring(L, Name);
+    } else {
+        int64 Value = Enum->GetValue(lua_tostring(L, 2));
+
+#if ENABLE_TYPE_CHECK == 1
+    if (Value < 0) {
+        UE_LOG(
+            LogUnLua, Warning, TEXT("Invalid enum name: %s of %s."),
+            ANSI_TO_TCHAR(lua_tostring(L, 2)), *Enum->GetEnum()->GetName()
+        );
+    }
+#endif
+
+        lua_pop(L, 1);
+        lua_pushvalue(L, 2);
+        lua_pushinteger(L, Value);
+        lua_rawset(L, 1);
+        lua_pushinteger(L, Value);
+    }
+
     return 1;
 }
 
@@ -1531,9 +1561,9 @@ int32 Enum_Delete(lua_State *L)
 }
 
 int32 Enum_GetMaxValue(lua_State* L)
-{   
+{
     int32 MaxValue = 0;
-    
+
     lua_pushvalue(L, lua_upvalueindex(1));
     if (lua_type(L,-1) == LUA_TTABLE)
     {
@@ -1585,7 +1615,7 @@ int32 Enum_GetNameStringByValue(lua_State* L)
             {
                 UEnum* Enum = EnumDesc->GetEnum();
                 if (Enum)
-                {   
+                {
                     ValueName = Enum->GetNameStringByValue(Value);
                 }
             }
@@ -1624,7 +1654,7 @@ int32 Enum_GetDisplayNameTextByValue(lua_State* L)
             {
                 UEnum* Enum = EnumDesc->GetEnum();
                 if (Enum)
-                {   
+                {
                     ValueName = Enum->GetDisplayNameTextByValue(Value);
                 }
             }
@@ -1887,7 +1917,7 @@ int32 ScriptStruct_Delete(lua_State *L)
     bool bTwoLvlPtr = false;
     void * Userdata = GetUserdataFast(L, 1, &bTwoLvlPtr);
     if (Userdata)
-    {   
+    {
         //struct in userdata memory
         if (!bTwoLvlPtr)
         {
@@ -2008,7 +2038,7 @@ TSharedPtr<UnLua::ITypeInterface> CreateTypeInterface(lua_State *L, int32 Index)
             lua_pushstring(L, "__name");
             Type = lua_rawget(L, Index);
             if (Type == LUA_TSTRING)
-            {   
+            {
                 const char* Name = lua_tostring(L, -1);
                 FClassDesc *ClassDesc = UnLua::FClassRegistry::Find(Name);
                 if (ClassDesc)

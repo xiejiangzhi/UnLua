@@ -821,7 +821,7 @@ static int32 TArray_NewIndex(lua_State* L)
 static const luaL_Reg TArrayLib[] =
 {
     { "Length", TArray_Length },
-    { "Num", TArray_Length },
+    // { "Num", TArray_Length },
     { "Add", TArray_Add },
     { "AddUnique", TArray_AddUnique },
     { "AddDefaultedAndGetRef", TArray_AddDefaultedAndGetRef },
