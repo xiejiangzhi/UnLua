@@ -131,7 +131,7 @@ static int32 TArray_Pairs(lua_State* L)
 static int32 TArray_Length(lua_State *L)
 {
     int32 NumParams = lua_gettop(L);
-    if (NumParams != 1)
+    if (NumParams < 1)
     {
         UNLUA_LOGERROR(L, LogUnLua, Log, TEXT("%s: Invalid parameters!"), ANSI_TO_TCHAR(__FUNCTION__));
         return 0;
