@@ -90,14 +90,14 @@ public class UnLua : ModuleRules
         loadBoolConfig("bEnableTypeChecking", "ENABLE_TYPE_CHECK", true);
         loadBoolConfig("bEnableRPCCall", "SUPPORTS_RPC_CALL", true);
         loadBoolConfig("bEnableCallOverriddenFunction", "ENABLE_CALL_OVERRIDDEN_FUNCTION", true);
-        loadBoolConfig("bWithUENamespace", "WITH_UE4_NAMESPACE", true);
+        loadBoolConfig("bWithUE4Namespace", "WITH_UE4_NAMESPACE", true);
         loadBoolConfig("bLegacyReturnOrder", "UNLUA_LEGACY_RETURN_ORDER", false);
         loadBoolConfig("bLegacyBlueprintPath", "UNLUA_LEGACY_BLUEPRINT_PATH", false);
     }
 
     private void SetupScripts()
     {
-        const string UnLuaSourceFileName = "UnLua.lua";
+        const string UnLuaSourceFileName = "UnLuaHotReload.lua";
         var PluginContentDirectory = Path.Combine(PluginDirectory, "Content");
         var DefaultScriptDirectory = Path.Combine(Target.ProjectFile.Directory.ToString(), "Content/Script");
         if (!Directory.Exists(DefaultScriptDirectory))

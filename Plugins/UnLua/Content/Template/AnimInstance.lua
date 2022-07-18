@@ -1,5 +1,6 @@
 require "UnLua"
 
+---@class ClassName
 local M = Class()
 
 --function M:Initialize(Initializer)
