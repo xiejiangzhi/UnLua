@@ -212,8 +212,9 @@ namespace UnLua
         {
             lua_register(L, "print", LogInfo);
             luaL_requiref(L, "UnLua", LuaOpen, 1);
-            luaL_dostring(L, "_G.require = require('UnLuaHotReload').require");
+            luaL_dostring(L, "require('UnLuaHotReload')");
             LegacySupport(L);
+            luaL_dostring(L, "require('app')");
             return 1;
         }
     }
