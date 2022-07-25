@@ -1,4 +1,4 @@
-require "UnLua"
+require 'app'
 
 local M = Class()
 
