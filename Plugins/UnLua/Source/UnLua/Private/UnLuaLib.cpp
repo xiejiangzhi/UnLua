@@ -214,7 +214,7 @@ namespace UnLua
             luaL_requiref(L, "UnLua", LuaOpen, 1);
             luaL_dostring(L, "require('UnLuaHotReload')");
             LegacySupport(L);
-            luaL_dostring(L, "require('app')");
+            luaL_dostring(L, "require('unlua_ext')");
             return 1;
         }
     }
