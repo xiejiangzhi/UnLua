@@ -1,5 +1,3 @@
-require 'app'
-
 local M = Class()
 
 

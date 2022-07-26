@@ -214,7 +214,12 @@ namespace UnLua
             luaL_requiref(L, "UnLua", LuaOpen, 1);
             luaL_dostring(L, "require('UnLuaHotReload')");
             LegacySupport(L);
-            luaL_dostring(L, "require('unlua_ext')");
+            return 1;
+        }
+
+        // Load user app after all Unlua env is ready
+        int OpenUserApp(lua_State* L) {
+            luaL_dostring(L, "require('app')");
             return 1;
         }
     }
