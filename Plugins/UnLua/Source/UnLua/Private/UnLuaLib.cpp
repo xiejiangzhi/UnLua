@@ -1,6 +1,4 @@
-#include "lauxlib.h"
 #include "UnLuaLib.h"
-
 #include "LowLevel.h"
 #include "LuaEnv.h"
 #include "UnLuaBase.h"
@@ -197,6 +195,8 @@ namespace UnLua
             luaL_setfuncs(L, UnLua_LegacyFunctions, 0);
             lua_setupvalue(L, -2, 1);
             lua_pcall(L, 0, LUA_MULTRET, 0);
+            lua_getglobal(L, "Class");
+            lua_setfield(L, -2, "Class");
         }
 
 #pragma endregion

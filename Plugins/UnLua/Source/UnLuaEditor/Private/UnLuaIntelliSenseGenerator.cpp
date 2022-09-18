@@ -84,6 +84,7 @@ void FUnLuaIntelliSenseGenerator::UpdateAll()
     {
         if (SlowTask.ShouldCancel())
             break;
+
         Export(Type);
         SlowTask.EnterProgressFrame();
     }
@@ -101,7 +102,7 @@ bool FUnLuaIntelliSenseGenerator::IsBlueprint(const FAssetData& AssetData)
     return AssetClass == UBlueprint::StaticClass()->GetFName() || AssetClass == UWidgetBlueprint::StaticClass()->GetFName();
 }
 
-bool FUnLuaIntelliSenseGenerator::ShouldExport(const FAssetData& AssetData)
+bool FUnLuaIntelliSenseGenerator::ShouldExport(const FAssetData& AssetData, bool bLoad)
 {
     const auto& Settings = *GetDefault<UUnLuaEditorSettings>();
     if (!Settings.bGenerateIntelliSense)
@@ -110,7 +111,7 @@ bool FUnLuaIntelliSenseGenerator::ShouldExport(const FAssetData& AssetData)
     if (!IsBlueprint(AssetData))
         return false;
 
-    const auto Asset = AssetData.FastGetAsset();
+    const auto Asset = AssetData.FastGetAsset(bLoad);
     if (!Asset)
         return false;
 
@@ -126,9 +127,7 @@ bool FUnLuaIntelliSenseGenerator::ShouldExport(const FAssetData& AssetData)
 
 void FUnLuaIntelliSenseGenerator::Export(const UBlueprint* Blueprint)
 {
-    const FString BPName = Blueprint->GetName();
-    const FString Content = UnLua::IntelliSense::Get(Blueprint);
-    SaveFile("/Game", BPName, Content);
+    Export(Blueprint->GeneratedClass);
 }
 
 void FUnLuaIntelliSenseGenerator::Export(const UField* Field)
@@ -138,8 +137,16 @@ void FUnLuaIntelliSenseGenerator::Export(const UField* Field)
 #else
     const UPackage* Package = (UPackage*)Field->GetTypedOuter(UPackage::StaticClass());
 #endif
-    const FString ModuleName = Package->GetName();
-    const FString FileName = UnLua::IntelliSense::GetTypeName(Field);
+    auto ModuleName = Package->GetName();
+    if (!Field->IsNative())
+    {
+        int32 LastSlashIndex;
+        if (ModuleName.FindLastChar('/', LastSlashIndex))
+            ModuleName.LeftInline(LastSlashIndex);
+    }
+    FString FileName = UnLua::IntelliSense::GetTypeName(Field);
+    if (FileName.EndsWith("_C"))
+        FileName.LeftChopInline(2);
     const FString Content = UnLua::IntelliSense::Get(Field);
     SaveFile(ModuleName, FileName, Content);
 }
@@ -258,7 +265,7 @@ void FUnLuaIntelliSenseGenerator::OnAssetRenamed(const FAssetData& AssetData, co
 
 void FUnLuaIntelliSenseGenerator::OnAssetUpdated(const FAssetData& AssetData)
 {
-    if (!ShouldExport(AssetData))
+    if (!ShouldExport(AssetData, true))
         return;
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *AssetData.ObjectPath.ToString());

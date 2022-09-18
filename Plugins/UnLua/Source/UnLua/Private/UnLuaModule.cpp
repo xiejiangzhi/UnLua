@@ -59,6 +59,7 @@ namespace UnLua
 
             CreateDefaultParamCollection();
 
+#if AUTO_UNLUA_STARTUP
 #if WITH_EDITOR
             if (!IsRunningGame())
             {
@@ -67,10 +68,7 @@ namespace UnLua
                 FEditorDelegates::EndPIE.AddRaw(this, &FUnLuaModule::OnEndPIE);
                 FGameDelegates::Get().GetEndPlayMapDelegate().AddRaw(this, &FUnLuaModule::OnEndPlayMap);
             }
-#endif
 
-#if AUTO_UNLUA_STARTUP
-#if WITH_EDITOR
             if (IsRunningGame() || IsRunningDedicatedServer())
 #endif
                 SetActive(true);
@@ -135,7 +133,7 @@ namespace UnLua
             bIsActive = bActive;
         }
 
-        virtual TSharedPtr<FLuaEnv> GetEnv(UObject* Object) override
+        virtual FLuaEnv* GetEnv(UObject* Object) override
         {
             if (!bIsActive)
                 return nullptr;

@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 #include "Compat/UObjectHash.h"
-#include "UnLuaPrivate.h"
 #include "UnLuaEditorStyle.h"
 #include "UnLuaEditorCommands.h"
 #include "Misc/CoreDelegates.h"
@@ -29,9 +28,13 @@
 #include "Kismet2/DebuggerCommands.h"
 #include "Interfaces/IMainFrameModule.h"
 #include "Interfaces/IPluginManager.h"
+#include "Settings/ProjectPackagingSettings.h"
 #include "Toolbars/AnimationBlueprintToolbar.h"
 #include "Toolbars/BlueprintToolbar.h"
 #include "Toolbars/MainMenuToolbar.h"
+#if ENGINE_MAJOR_VERSION > 4
+#include "UObject/ObjectSaveContext.h"
+#endif
 
 #define LOCTEXT_NAMESPACE "FUnLuaEditorModule"
 
@@ -56,8 +59,14 @@ public:
 
         UUnLuaEditorFunctionLibrary::WatchScriptDirectory();
 
+#if ENGINE_MAJOR_VERSION > 4
+        UPackage::PreSavePackageWithContextEvent.AddRaw(this, &FUnLuaEditorModule::OnPackageSavingWithContext);
+        UPackage::PackageSavedWithContextEvent.AddRaw(this, &FUnLuaEditorModule::OnPackageSavedWithContext);
+#else
         UPackage::PreSavePackageEvent.AddRaw(this, &FUnLuaEditorModule::OnPackageSaving);
         UPackage::PackageSavedEvent.AddRaw(this, &FUnLuaEditorModule::OnPackageSaved);
+#endif
+        SetupPackagingSettings();
     }
 
     virtual void ShutdownModule() override
@@ -66,8 +75,13 @@ public:
         FCoreDelegates::OnPostEngineInit.RemoveAll(this);
         UnregisterSettings();
 
+#if ENGINE_MAJOR_VERSION > 4
+        UPackage::PreSavePackageWithContextEvent.RemoveAll(this);
+        UPackage::PackageSavedWithContextEvent.RemoveAll(this);
+#else
         UPackage::PreSavePackageEvent.RemoveAll(this);
         UPackage::PackageSavedEvent.RemoveAll(this);
+#endif
     }
 
 private:
@@ -126,32 +140,61 @@ private:
         return true;
     }
 
+#if ENGINE_MAJOR_VERSION > 4
+    void OnPackageSavingWithContext(UPackage* Package, FObjectPreSaveContext Context)
+    {
+        OnPackageSaving(Package);
+    }
+
+    void OnPackageSavedWithContext(const FString& PackageFileName, UPackage* Package, FObjectPostSaveContext Context)
+    {
+        OnPackageSaved(PackageFileName, Package);
+    }
+#endif
+
     void OnPackageSaving(UPackage* Package)
     {
         if (!GEditor || !GEditor->PlayWorld)
             return;
-        
+
         ForEachObjectWithPackage(Package, [this, Package](UObject* Object)
         {
             const auto Class = Cast<UClass>(Object);
-            if (!Class)
+            if (!Class || Class->GetName().StartsWith(TEXT("SKEL_")) || Class->GetName().StartsWith(TEXT("REINST_")))
                 return true;
-            ULuaFunction::SuspendOverrides(Class);
             SuspendedPackages.Add(Package, Class);
             return false;
         }, false);
 
-        UE_LOG(LogUnLua, Log, TEXT("OnPackageSaving:%s"), *Package->GetFullName());
+        for (const auto Pair : SuspendedPackages)
+            ULuaFunction::SuspendOverrides(Pair.Value);
     }
 
-    void OnPackageSaved(const FString& String, UObject* Object)
+    void OnPackageSaved(const FString& PackageFileName, UObject* Outer)
     {
         if (!GEditor || !GEditor->PlayWorld)
             return;
-        
-        const auto Class = SuspendedPackages.FindAndRemoveChecked((UPackage*)Object);
-        ULuaFunction::ResumeOverrides(Class);
-        UE_LOG(LogUnLua, Log, TEXT("OnPackageSaved:%s %s"), *String, *Object->GetFullName());
+
+        UPackage* Package = (UPackage*)Outer;
+        if (SuspendedPackages.Contains(Package))
+        {
+            ULuaFunction::ResumeOverrides(SuspendedPackages[Package]);
+            SuspendedPackages.Remove(Package);
+        }
+    }
+
+    void SetupPackagingSettings()
+    {
+        const auto PackagingSettings = GetMutableDefault<UProjectPackagingSettings>();
+        FDirectoryPath ScriptPath;
+        ScriptPath.Path = TEXT("Script");
+        for (const auto& DirPath : PackagingSettings->DirectoriesToAlwaysStageAsUFS)
+        {
+            if (DirPath.Path == ScriptPath.Path)
+                return;
+        }
+        PackagingSettings->DirectoriesToAlwaysStageAsUFS.Add(ScriptPath);
+        PackagingSettings->SaveConfig();
     }
 
     TSharedPtr<FBlueprintToolbar> BlueprintToolbar;

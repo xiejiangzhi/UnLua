@@ -48,8 +48,6 @@ UUnLuaManager::UUnLuaManager()
     InputVectorAxisFunc = Class->FindFunctionByName(FName("InputVectorAxis"));
     InputGestureFunc = Class->FindFunctionByName(FName("InputGesture"));
     AnimNotifyFunc = Class->FindFunctionByName(FName("TriggerAnimNotify"));
-
-    FWorldDelegates::OnWorldCleanup.AddUObject(this, &UUnLuaManager::OnWorldCleanup);
 }
 
 /**
@@ -116,12 +114,6 @@ bool UUnLuaManager::Bind(UObject *Object, const TCHAR *InModuleName, int32 Initi
     }
 
     return true;
-}
-
-void UUnLuaManager::OnWorldCleanup(UWorld* World, bool bArg, bool bCond)
-{
-    if (Env)
-        Env->GC();
 }
 
 void UUnLuaManager::NotifyUObjectDeleted(const UObjectBase* Object)
@@ -240,6 +232,9 @@ void UUnLuaManager::OnLatentActionCompleted(int32 LinkID)
 bool UUnLuaManager::BindClass(UClass* Class, const FString& InModuleName, FString& Error)
 {
     check(Class);
+
+    if (Class->HasAnyFlags(RF_NeedPostLoad | RF_NeedPostLoadSubobjects))
+        return false;
 
     if (Classes.Contains(Class))
         return true;

@@ -14,9 +14,9 @@
 
 #pragma once
 
+#include "lua.hpp"
 #include "UnLuaPrivate.h"
 #include "UnLuaCompatibility.h"
-#include "lua.hpp"
 
 struct FScriptContainerDesc
 {
@@ -97,12 +97,14 @@ bool PushFunction(lua_State *L, UObjectBaseUtility *Object, int32 FunctionRef);
 bool CallFunction(lua_State *L, int32 NumArgs, int32 NumResults);
 
 /**
+ * Get corresponding Lua instance for a UObjectBaseUtility
+ */
+UNLUA_API bool GetObjectMapping(lua_State *L, UObjectBaseUtility *Object);
+
+/**
  * Add Lua package path
  */
 UNLUA_API void AddPackagePath(lua_State *L, const char *Path);
-int LoadFromBuiltinLibs(lua_State *L);
-int LoadFromCustomLoader(lua_State *L);
-int LoadFromFileSystem(lua_State *L);
 
 /**
  * Functions to register collision enums

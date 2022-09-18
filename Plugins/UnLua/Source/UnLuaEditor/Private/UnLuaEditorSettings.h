@@ -52,7 +52,7 @@ public:
 
     /** Whether or not startup UnLua module on game start. (Requires restart to take effect) */
     UPROPERTY(config, EditAnywhere, Category = "Build")
-    bool bAutoStart = true;
+    bool bAutoStartup = true;
 
     /** Enable UnLua debug routine codes. (Requires restart to take effect) */
     UPROPERTY(config, EditAnywhere, Category = "Build")
@@ -73,6 +73,10 @@ public:
     /** Enable 'Overridden' support at lua runtime. (Requires restart to take effect) */
     UPROPERTY(config, EditAnywhere, Category = "Build")
     bool bEnableCallOverriddenFunction = true;
+
+    /** Whether or not compile lua module as c++ code. (Requires restart to take effect) */
+    UPROPERTY(config, EditAnywhere, Category = "Build")
+    bool bLuaCompileAsCpp = false;
 
     /** Create UE4 global table on lua env. (Requires restart to take effect) */
     UPROPERTY(config, EditAnywhere, Category = "Legacy")

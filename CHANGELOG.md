@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.2.4] - 2022-9-1
+- 增加最佳实践工程示例 [Lyra with UnLua](https://github.com/xuyanghuang-tencent/LyraWithUnLua)
+- 支持配置按C/C++编译Lua环境
+- 支持Lua启动入口脚本配置
+- 支持Lua环境手动启动参数
+- 默认自动将 `Content/Script` 目录加入打包设置
+- 增加一些指针对象的合法性检查
+- `UnLua.HotReload` 支持手动指定热重载模块列表
+- 支持Commandlet导出蓝图智能提示信息 [#507](https://github.com/Tencent/UnLua/pull/507)
+
+### Fixed
+- UE5下的Script编译警告
+- 智能提示文件重复生成 [#498](https://github.com/Tencent/UnLua/issues/498)
+- 智能提示蓝图类型使用 `_C` 后缀 [#493](https://github.com/Tencent/UnLua/pull/493)
+- PIE运行状态下保存对象，可能引起编辑器崩溃 [#489](https://github.com/Tencent/UnLua/pull/489)
+- `bAutoStartup` 配置选项没有生效
+- 当 `UnLuaHotReload.lua` 不存在时会报错
+- 通过C++类绑定的时候使用自动创建脚本功能会崩溃 [#490](https://github.com/Tencent/UnLua/issues/490)
+- 修复一些智能提示被过滤了的情况
+- 监听嵌套界面里的组件的事件会导致组件无法被回收
+- 覆写C++类型的函数后在蓝图编辑器里调用需要刷新节点才能编译过 [#500](https://github.com/Tencent/UnLua/issues/500)
+- Lua持有结构体下的TArray字段，在结构体本身被GC后访问该数组会导致崩溃 [#505](https://github.com/Tencent/UnLua/issues/505)
+- `TCHAR_TO_XXX` 等宏应该只在行内传参使用 [#508](https://github.com/Tencent/UnLua/pull/508)
+- 退出游戏时候可能访问已经被释放的 `UUnLuaManager` 引起的崩溃 [#504](https://github.com/Tencent/UnLua/issues/504)
+- UE5下在编辑器运行游戏的同时编译并保存动画蓝图会Crash [#510](https://github.com/Tencent/UnLua/issues/510)
+
+### Changed
+- Lua模版文件中使用 `@type` 注解 [#498](https://github.com/Tencent/UnLua/issues/498)
+- 使用智能指针保存 `UEnum` 类型指针来区分有效性 [#488](https://github.com/Tencent/UnLua/pull/488)
+- Lua源码作为外部第三方模块引入，默认使用C编译
+- Lua生成模版中统一使用 `UnLua.Class`，并增加类型注解
+- 调整所有LuaLib的异常抛出形式为 `luaL_error` 而不是仅输出错误日志
+- 切换场景时不再强制进行LuaGC
+
 ## [2.2.3] - 2022-7-15
 
 ### Added
