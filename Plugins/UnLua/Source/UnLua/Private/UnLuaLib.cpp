@@ -216,11 +216,5 @@ namespace UnLua
             LegacySupport(L);
             return 1;
         }
-
-        // Load user app after all Unlua env is ready
-        int OpenUserApp(lua_State* L) {
-            luaL_dostring(L, "require('app')");
-            return 1;
-        }
     }
 }
