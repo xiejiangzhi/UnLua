@@ -208,6 +208,8 @@ static const luaL_Reg UWorldLib[] =
 BEGIN_EXPORT_REFLECTED_CLASS(UWorld)
     ADD_LIB(UWorldLib)
     ADD_FUNCTION(GetTimeSeconds)
+    ADD_FUNCTION(GetDeltaSeconds)
+    ADD_FUNCTION(GetRealTimeSeconds)
 END_EXPORT_CLASS()
 
 IMPLEMENT_EXPORTED_CLASS(UWorld)
