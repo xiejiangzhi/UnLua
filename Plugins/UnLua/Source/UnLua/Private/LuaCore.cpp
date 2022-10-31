@@ -1306,18 +1306,20 @@ int32 Enum_Index(lua_State *L)
 	}
 
     if ( lua_type(L, 2) == LUA_TNUMBER) {
-        FText DisplayName = Enum->GetEnum()->GetDisplayNameTextByValue(lua_tointeger(L, 2));
+        FString EnumName = Enum->GetEnum()->GetNameStringByValue(lua_tointeger(L, 2));
 
 #if ENABLE_TYPE_CHECK == 1
-    if (DisplayName.IsEmpty()) {
+    if (EnumName.IsEmpty()) {
         UE_LOG(
             LogUnLua, Warning, TEXT("Invalid enum value: %s of %s."),
             ANSI_TO_TCHAR(lua_tostring(L, 2)), *Enum->GetEnum()->GetName()
         );
+        lua_pop(L, 1);
+        return 0;
     }
 #endif
 
-        char* Name = TCHAR_TO_UTF8(*DisplayName.ToString());
+        char* Name = TCHAR_TO_UTF8(*EnumName);
         lua_pop(L, 1);
         lua_pushvalue(L, 2);
         lua_pushstring(L, Name);
