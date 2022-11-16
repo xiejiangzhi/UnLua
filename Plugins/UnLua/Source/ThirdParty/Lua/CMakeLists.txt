@@ -23,11 +23,12 @@ if(NOT LUA_VERSION)
     set(LUA_VERSION "5.4.3")
 endif()
 
-set(LUA_IDSIZE 120 CACHE STRING "gives the maximum size for the description of the source of a function in debug information.")
+set(LUA_IDSIZE 256 CACHE STRING "gives the maximum size for the description of the source of a function in debug information.")
 set(LUA_SRC_PATH lua-${LUA_VERSION}/src)
 aux_source_directory(${LUA_SRC_PATH} LUA_CORE)
 list(REMOVE_ITEM LUA_CORE "${LUA_SRC_PATH}/onelua.c")
 
+add_definitions(-DLUA_IDSIZE=${LUA_IDSIZE})
 if(LUA_COMPILE_AS_CPP)
     set_source_files_properties(${LUA_CORE} PROPERTIES LANGUAGE CXX)
 endif()
@@ -43,12 +44,26 @@ elseif(APPLE)
             ${LUA_CORE}
         )
     else()
-        set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
+        set(CMAKE_MACOSX_RPATH 1)
+        set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/libLua")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET 10.10)
         add_definitions(-DLUA_USE_MACOSX)
         add_library(Lua SHARED
             ${LUA_CORE}
         )
     endif()
+elseif(PS5)
+    add_definitions(-DLUA_NO_OS_EXECUTE)
+    add_definitions(-DLUA_NO_OS_TMPNAME)
+    add_definitions(-DLUA_NO_IO_TMPFILE)
+    add_library(Lua STATIC
+        ${LUA_CORE}
+    )
+    target_include_directories(Lua SYSTEM
+        PRIVATE ${SCE_PROSPERO_SDK_DIR}/target/include
+        PRIVATE ${SCE_PROSPERO_SDK_DIR}/target/include_common
+        PRIVATE ${LUA_SRC_PATH}/../src-ps5
+    )
 else()
     add_library(Lua STATIC
         ${LUA_CORE}

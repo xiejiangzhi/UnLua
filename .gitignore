@@ -1,3 +1,4 @@
+**/.DS_Store
 .vs/
 Binaries/
 Build/
@@ -19,3 +20,4 @@ IOS/
 /TPSProject.sln.DotSettings.user
 /.vscode
 /Plugins/Developer/RiderLink
+/Benchmark
