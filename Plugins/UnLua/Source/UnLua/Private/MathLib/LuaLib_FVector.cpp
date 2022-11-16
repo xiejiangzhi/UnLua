@@ -91,6 +91,23 @@ static int32 FVector_Normalize(lua_State* L)
     return 1;
 }
 
+static int32 FVector_Unpack(lua_State* L)
+{
+    const int32 NumParams = lua_gettop(L);
+    if (NumParams < 1)
+        return luaL_error(L, "invalid parameters");
+
+    FVector* V = (FVector*)GetCppInstanceFast(L, 1);
+    if (!V)
+        return luaL_error(L, "invalid FVector");
+
+    lua_pushnumber(L, V->X);
+    lua_pushnumber(L, V->Y);
+    lua_pushnumber(L, V->Z);
+    return 3;
+}
+
+
 static int32 FVector_UNM(lua_State* L)
 {
     FVector* V = (FVector*)GetCppInstanceFast(L, 1);
@@ -106,6 +123,7 @@ static const luaL_Reg FVectorLib[] =
 {
     {"Set", FVector_Set},
     {"Normalize", FVector_Normalize},
+    {"Unpack", FVector_Unpack },
     {"Add", UnLua::TMathCalculation<FVector, UnLua::TAdd<unluaReal>, true>::Calculate},
     {"Sub", UnLua::TMathCalculation<FVector, UnLua::TSub<unluaReal>, true>::Calculate},
     {"Mul", UnLua::TMathCalculation<FVector, UnLua::TMul<unluaReal>, true>::Calculate},
