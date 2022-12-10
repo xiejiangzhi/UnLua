@@ -1,6 +1,21 @@
-return {
-    require = require,
-    reload = function() end,
+------------------------------------------
+--- HotFix - 运行时HotFix支持 参考云风方案
+--- 替换运行环境中的函数，保持upvalue和运行时的table
+--- 为开发期设计，尽量替换。最差的结果就是重新启动
+--- 原表改变，类型改变 后逻辑由业务保证正确
+--- 基于lua 5.3，重定向require，使用env加载实现沙盒
+--- 提供一系列回调注册，可以在hotfix前后做处理
+------------------------------------------
+-- 在Module中如果定义此标记，则对此module进行reload操作
+-- local M = { HOT_RELOAD = true }
+
+local HOT_RELOAD_MARK = "HOT_RELOAD"
+local loaded_modules = setmetatable({}, { __mode = "v" })
+local ignore_modules = {}
+local config = {
+    debug = false,
+    script_root_path = UE.UUnLuaFunctionLibrary.GetScriptRootPath(),
+    ignore_modules = ignore_modules
 }
 local hook = {
     module_loaded = nil
@@ -24,15 +39,15 @@ local dump = function(tbl, max_indent)
         end
         handled[tbl] = true
         local ret = rep(" ", indent) .. "{\r\n"
-        indent = indent + 2
+        indent = indent + 2 
         for k, v in pairs(tbl) do
             ret = ret .. rep(" ", indent)
             if type(k) == "number" then
                 ret = ret .. "[" .. k .. "] = "
             elseif type(k) == "string" then
-                ret = ret  .. k ..  " = "
+                ret = ret  .. k ..  " = "   
             else
-                ret = ret  .. tostring(k) ..  " = "
+                ret = ret  .. tostring(k) ..  " = "   
             end
             if type(v) == "number" then
                 ret = ret .. v .. ",\r\n"
@@ -167,7 +182,7 @@ local function make_sandbox()
 
         for name, module in pairs(modules) do
             loaded[name] = module
-            loaded[module] = name
+            loaded[module] = name     
         end
     end
 
@@ -234,7 +249,7 @@ local function merge_objects(module_res)
                         i = i + 1
                         end
                     end
-                end
+                end			
             end
         end
     end
@@ -334,7 +349,7 @@ local function match_upvalues(value_info_map, old_upvalues)
                                     replaced_upvalue = new_upvalue
                                 end
                             end
-
+    
                             if replaced_upvalue then
                                 ret[id] = { replaced_upvalue = replaced_upvalue }
                             end
@@ -486,7 +501,7 @@ local function update_modules(old_modules, new_modules, new_envs)
             local old_module_upvalues = collect_module_upvalues(old_module)
             print("--------------Print OldModuleUpValue--------------")
             print(dump(old_module_upvalues, 6))
-
+            
             local moduleres = {
                 values = {},
                 upvalue_map = {},
@@ -510,7 +525,7 @@ local function update_modules(old_modules, new_modules, new_envs)
             moduleres.upvalue_map = match_upvalues(moduleres.values, old_module_upvalues)
             print("--------------Print UVMap--------------")
             print(dump(moduleres.upvalue_map, 10))
-
+            
             result[i] = moduleres
         end
     end
@@ -553,7 +568,7 @@ local function reload_modules(module_names)
     local new_modules = {}
     local module_envs = {}
 
-    for _, module_name in ipairs(module_names) do
+    for _, module_name in ipairs(module_names) do		
         if loaded_modules[module_name] == nil then
             sandbox.require(module_name)
         else
