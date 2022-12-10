@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+#include "LowLevel.h"
 #include "UnLuaEx.h"
 #include "LuaCore.h"
 #include "Containers/LuaArray.h"
@@ -31,12 +32,13 @@ static int32 TArray_New(lua_State* L)
     if (NumParams != 2)
         return luaL_error(L, "invalid parameters");
 
-    TSharedPtr<UnLua::ITypeInterface> TypeInterface(CreateTypeInterface(L, 2));
-    if (!TypeInterface)
+    auto& Env = UnLua::FLuaEnv::FindEnvChecked(L);
+    auto ElementType = Env.GetPropertyRegistry()->CreateTypeInterface(L, 2);
+    if (!ElementType)
         return luaL_error(L, "failed to create TArray");
 
     auto Registry = UnLua::FLuaEnv::FindEnvChecked(L).GetContainerRegistry();
-    Registry->NewArray(L, TypeInterface, FLuaArray::OwnedBySelf);
+    Registry->NewArray(L, ElementType, FLuaArray::OwnedBySelf);
     return 1;
 }
 
@@ -72,9 +74,11 @@ static int32 TArray_Pairs(lua_State* L)
     if (NumParams < 1)
         return luaL_error(L, "invalid parameters");
 
-    FLuaArray* Array = (FLuaArray*)(GetCppInstanceFast(L, 1));
+    FLuaArray* Array = (FLuaArray*)GetCppInstanceFast(L, 1);
     if (!Array)
-        return 0;
+        return UnLua::LowLevel::PushEmptyIterator(L);
+
+    TArray_Guard(L, Array);
 
     const int32 IncrVal = NumParams > 1 ? lua_tointeger(L, 2) : 1;
     if (IncrVal == 0) {
@@ -508,7 +512,8 @@ static int32 TArray_Delete(lua_State* L)
         return luaL_error(L, "invalid parameters");
 
     FLuaArray* Array = (FLuaArray*)(GetCppInstanceFast(L, 1));
-    TArray_Guard(L, Array);
+    if (!Array)
+        return 0;
 
     auto Registry = UnLua::FLuaEnv::FindEnvChecked(L).GetContainerRegistry();
     Registry->Remove(Array);

@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+#include "LowLevel.h"
 #include "UnLuaEx.h"
 #include "LuaCore.h"
 #include "Containers/LuaMap.h"
@@ -34,16 +35,17 @@ static int32 TMap_New(lua_State* L)
     if (NumParams != 3)
         return luaL_error(L, "invalid parameters");
 
-    TSharedPtr<UnLua::ITypeInterface> KeyInterface(CreateTypeInterface(L, 2));
-    if (!KeyInterface)
+    auto& Env = UnLua::FLuaEnv::FindEnvChecked(L);
+    auto KeyType = Env.GetPropertyRegistry()->CreateTypeInterface(L, 2);
+    if (!KeyType)
         return luaL_error(L, "invalid key type");
 
-    TSharedPtr<UnLua::ITypeInterface> ValueInterface(CreateTypeInterface(L, 3));
-    if (!ValueInterface)
+    auto ValueType = Env.GetPropertyRegistry()->CreateTypeInterface(L, 3);
+    if (!ValueType)
         return luaL_error(L, "invalid value type");
 
-    auto Registry = UnLua::FLuaEnv::FindEnvChecked(L).GetContainerRegistry();
-    Registry->NewMap(L, KeyInterface, ValueInterface, FLuaMap::OwnedBySelf);
+    auto Registry = Env.GetContainerRegistry();
+    Registry->NewMap(L, KeyType, ValueType, FLuaMap::OwnedBySelf);
 
     return 1;
 }
@@ -85,7 +87,10 @@ static int32 TMap_Pairs(lua_State* L)
     if (NumParams != 1)
         return luaL_error(L, "invalid parameters");
 
-    FLuaMap* Map = (FLuaMap*)(GetCppInstanceFast(L, 1));
+    FLuaMap* Map = (FLuaMap*)GetCppInstanceFast(L, 1);
+    if (!Map)
+        return UnLua::LowLevel::PushEmptyIterator(L);
+
     TMap_Guard(L, Map);
 
     lua_pushcfunction(L, TMap_Enumerable);
@@ -278,7 +283,8 @@ static int32 TMap_Delete(lua_State* L)
         return luaL_error(L, "invalid parameters");
 
     FLuaMap* Map = (FLuaMap*)(GetCppInstanceFast(L, 1));
-    TMap_Guard(L, Map);
+    if (!Map)
+        return 0;
 
     auto Registry = UnLua::FLuaEnv::FindEnvChecked(L).GetContainerRegistry();
     Registry->Remove(Map);

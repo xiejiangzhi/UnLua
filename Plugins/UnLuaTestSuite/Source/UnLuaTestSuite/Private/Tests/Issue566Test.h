@@ -13,26 +13,43 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 #pragma once
+#include "Issue566Test.generated.h"
 
-#include "Issue554Test.generated.h"
-
-USTRUCT(BlueprintType)
-struct FIssue554Struct
-{
-    GENERATED_BODY()
-    
-    UPROPERTY()
-    float Pitch{-34.0f};
-
-    UPROPERTY()
-    float Yaw{270.0f};
-};
+DECLARE_DYNAMIC_DELEGATE(FIssue566Delegate);
 
 UCLASS()
-class UIssue554Class : public UObject
+class UIssue566FunctionLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 public:
-    UPROPERTY()
-    FIssue554Struct Struct[2];
+    UFUNCTION(BlueprintCallable)
+    static void AddCallback(FIssue566Delegate InDelegate)
+    {
+        Delegates.Add(InDelegate);
+    }
+
+    UFUNCTION(BlueprintCallable)
+    static void Invoke()
+    {
+        for (auto& Delegate : Delegates)
+        {
+            if (Delegate.IsBound())
+                Delegate.Execute();
+        }
+    }
+
+    UFUNCTION(BlueprintCallable)
+    static void Reset()
+    {
+        Delegates.Empty();
+    }
+
+private:
+    static TArray<FIssue566Delegate> Delegates;
+};
+
+UCLASS()
+class UIssue566Object : public UObject
+{
+    GENERATED_BODY()
 };

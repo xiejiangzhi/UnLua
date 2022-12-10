@@ -12,13 +12,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 // See the License for the specific language governing permissions and limitations under the License.
 
+
+#include "Issue561Test.h"
+#include "LowLevel.h"
+#include "UnLuaSettings.h"
 #include "UnLuaTestCommon.h"
-#include "Components/CapsuleComponent.h"
+#include "UnLuaTestHelpers.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-struct FUnLuaTest_Issue292 : FUnLuaTestBase
+struct FUnLuaTest_Issue561 : FUnLuaTestBase
 {
     virtual bool InstantTest() override
     {
@@ -29,24 +33,17 @@ struct FUnLuaTest_Issue292 : FUnLuaTestBase
     {
         FUnLuaTestBase::SetUp();
 
-        const auto World = GetWorld();
-        AActor* Actor = World->SpawnActor(AActor::StaticClass());
-        UnLua::PushUObject(L, Actor);
-        lua_setglobal(L, "G_Actor");
-        Actor->K2_DestroyActor();
-
-        const char* Chunk = "\
-            return G_Actor:IsValid(), UE.UKismetSystemLibrary.IsValid(G_Actor)\
-            ";
+        const auto Chunk = R"(
+            local Struct1 = UE.FIssue561Struct()
+            local Struct2 = UE.FIssue561Struct()
+            Struct1.OnMouseEvent = Struct2.OnMouseEvent
+        )";
         UnLua::RunChunk(L, Chunk);
-
-        RUNNER_TEST_FALSE(lua_toboolean(L, -1));
-        RUNNER_TEST_FALSE(lua_toboolean(L, -2));
 
         return true;
     }
 };
 
-IMPLEMENT_UNLUA_INSTANT_TEST(FUnLuaTest_Issue292, TEXT("UnLua.Regression.Issue292 actor调用K2_DestroyActor后，立刻调用IsValid会返回true"))
+IMPLEMENT_UNLUA_INSTANT_TEST(FUnLuaTest_Issue561, TEXT("UnLua.Regression.Issue561 访问UStruct内部的委托会check"))
 
-#endif //WITH_DEV_AUTOMATION_TESTS
+#endif

@@ -1341,9 +1341,20 @@ public:
             return false;
         }
 
+        auto DelegateRegistry = UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry();
         void* ValuePtr = Property->ContainerPtrToValuePtr<void>(ContainerPtr);
         FScriptDelegate* ScriptDelegate = DelegateProperty->GetPropertyValuePtr(ValuePtr);
-        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ScriptDelegate, DelegateProperty, ScriptDelegate->GetUObject());
+
+        // https://github.com/Tencent/UnLua/issues/566
+        if (Property->GetOwner<UFunction>())
+        {
+            ValuePtr = DelegateRegistry->Register(ScriptDelegate, DelegateProperty);
+            const auto Ret = SetValueInternal(L, ValuePtr, IndexInStack, bCopyValue);
+            *ScriptDelegate = *(FScriptDelegate*)ValuePtr;
+            return Ret;
+        }
+
+        DelegateRegistry->Register(ScriptDelegate, DelegateProperty, ScriptDelegate->GetUObject());
         return SetValueInternal(L, ValuePtr, IndexInStack, bCopyValue);
     }
     
@@ -1426,7 +1437,8 @@ public:
         }
 
         void* ValuePtr = (void*)Property->ContainerPtrToValuePtr<void>(ContainerPtr);
-        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ValuePtr, DelegateProperty, (UObject*)ContainerPtr);
+        UObject* Owner = Property->GetOwnerStruct()->IsA<UClass>() ? (UObject*)ContainerPtr : nullptr;
+        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ValuePtr, DelegateProperty, Owner);
         GetValueInternal(L, ValuePtr, bCreateCopy);
     }
 
@@ -1445,7 +1457,8 @@ public:
         }
 
         void* ValuePtr = Property->ContainerPtrToValuePtr<void>(ContainerPtr);
-        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ValuePtr, DelegateProperty, (UObject*)ContainerPtr);
+        UObject* Owner = Property->GetOwnerStruct()->IsA<UClass>() ? (UObject*)ContainerPtr : nullptr;
+        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ValuePtr, DelegateProperty, Owner);
         return SetValueInternal(L, ValuePtr, IndexInStack, bCopyValue);
     }
     
