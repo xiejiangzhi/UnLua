@@ -78,6 +78,20 @@ namespace UnLua
             return 0;
         }
 
+        static int GetRefObj(lua_State* L)
+        {
+            const auto Proxy = (FManualRefProxy*)lua_touserdata(L, 1);
+            if (!Proxy)
+                return luaL_error(L, "Invalid ref proxy");
+
+            const auto Object = Proxy->Object.Get();
+            if (!Object)
+                return 0;
+
+            UnLua::PushUObject(L, Object);
+            return 1;
+        }
+
         static constexpr luaL_Reg UnLua_Functions[] = {
             {"Log", LogInfo},
             {"LogWarn", LogWarn},
@@ -85,6 +99,7 @@ namespace UnLua
             {"HotReload", HotReload},
             {"Ref", Ref},
             {"Unref", Unref},
+            {"GetRefObj", GetRefObj},
             {NULL, NULL}
         };
 
