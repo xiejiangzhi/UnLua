@@ -1,15 +1,15 @@
 // Tencent is pleased to support the open source community by making UnLua available.
-// 
+//
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the MIT License (the "License"); 
+// Licensed under the MIT License (the "License");
 // you may not use this file except in compliance with the License. You may obtain a copy of the License at
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, 
-// software distributed under the License is distributed on an "AS IS" BASIS, 
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
 #include "UnLuaCompatibility.h"
@@ -73,7 +73,7 @@ static int32 FQuat_Normalize(lua_State* L)
 }
 
 /**
- * Build a FQuat from an axis and an angle. 
+ * Build a FQuat from an axis and an angle.
  * example: local Q = FQuat.FromAxisAndAngle(Axis, Angle)
  */
 static int32 FQuat_FromAxisAndAngle(lua_State* L)
@@ -118,10 +118,31 @@ static int32 FQuat_Set(lua_State* L)
     return 0;
 }
 
+static int32 FQuat_ToAxisAndAngle(lua_State* L)
+{
+    const int32 NumParams = lua_gettop(L);
+    if (NumParams < 1)
+        return luaL_error(L, "invalid parameters");
+
+    FQuat* V = (FQuat*)GetCppInstanceFast(L, 1);
+    if (!V)
+        return luaL_error(L, "invalid FQuat");
+
+    void* OutVector = NewTypedUserdata(L, FVector);
+    new(OutVector) FVector(0);
+    float Angle = 0;
+    V->ToAxisAndAngle(*(FVector*)OutVector, Angle);
+    lua_pushnumber(L, Angle);
+
+    return 2;
+}
+
+
 static const luaL_Reg FQuatLib[] =
 {
     {"Normalize", FQuat_Normalize},
     {"FromAxisAndAngle", FQuat_FromAxisAndAngle},
+    {"ToAxisAndAngle", FQuat_ToAxisAndAngle},
     {"Set", FQuat_Set},
     {"Mul", UnLua::TMathCalculation<FQuat, UnLua::TMul<FQuat>, true, UnLua::TMul<FQuat, unluaReal>>::Calculate},
     {"__mul", UnLua::TMathCalculation<FQuat, UnLua::TMul<FQuat>, false, UnLua::TMul<FQuat, unluaReal>>::Calculate},
@@ -131,15 +152,12 @@ static const luaL_Reg FQuatLib[] =
 };
 
 BEGIN_EXPORT_REFLECTED_CLASS(FQuat)
+    ADD_STATIC_FUNCTION_EX("FindBetweenNormals", FQuat, FindBetweenNormals, const FVector&, const FVector&)
+
     ADD_FUNCTION(GetNormalized)
     ADD_FUNCTION(IsNormalized)
     ADD_FUNCTION(Size)
     ADD_FUNCTION(SizeSquared)
-#if ENGINE_MAJOR_VERSION >=5
-    ADD_CONST_FUNCTION_EX("ToAxisAndAngle", void, TQuat::ToAxisAndAngle, UE::Math::TVector<unluaReal>&, unluaReal&)
-#else
-    ADD_FUNCTION(ToAxisAndAngle)
-#endif
     ADD_FUNCTION(Inverse)
     ADD_FUNCTION(RotateVector)
     ADD_FUNCTION(UnrotateVector)
